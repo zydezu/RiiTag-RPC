@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Cache Python dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
@@ -36,6 +36,7 @@ jobs:
       - name: Build Linux executable
         run: |
           bash tools/build_executable.sh
+          mv dist/riitag-rpc dist/RiiTag-RPC_Linux_x64
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
@@ -63,6 +64,7 @@ jobs:
             pip install -r requirements.txt
             pip install pyinstaller
             pyinstaller --onefile \
+              --name "RiiTag-RPC_Linux_ARM64" \
               --add-data "banner.txt:." \
               --add-data "config.json:." \
               start.py
@@ -81,7 +83,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Cache Python dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pip
@@ -101,12 +103,12 @@ jobs:
       - name: Build macOS executable
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --add-data "banner.txt:." --add-data "config.json:." start.py
+          pyinstaller --onefile --name "RiiTag-RPC_MacOS_x64" --add-data "banner.txt:." --add-data "config.json:." start.py
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: RiiTag-RPC_MacOS_x64
-          path: dist/riitag-rpc
+          path: dist/RiiTag-RPC_MacOS_x64
 
 
   windows_x64:
@@ -135,7 +137,7 @@ jobs:
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
-          pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+          pyinstaller --onefile --name "RiiTag-RPC_Windows_x64" --add-data "banner.txt;." --add-data "config.json;." start.py
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
@@ -188,10 +190,10 @@ jobs:
         id: tar
         run: |
           tar_args=()
-          if [ -f releases/linux_x64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_x64" "riitag-rpc"); fi
-          if [ -f releases/linux_arm64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_arm64" "riitag-rpc"); fi
-          if [ -f releases/macos_x64/riitag-rpc ]; then tar_args+=("-C" "releases/macos_x64" "riitag-rpc"); fi
-          if [ -f releases/windows_x64/riitag-rpc.exe ]; then tar_args+=("-C" "releases/windows_x64" "riitag-rpc.exe"); fi
+          if [ -f releases/linux_x64/RiiTag-RPC_Linux_x64 ]; then tar_args+=("-C" "releases/linux_x64" "RiiTag-RPC_Linux_x64"); fi
+          if [ -f releases/linux_arm64/RiiTag-RPC_Linux_ARM64 ]; then tar_args+=("-C" "releases/linux_arm64" "RiiTag-RPC_Linux_ARM64"); fi
+          if [ -f releases/macos_x64/RiiTag-RPC_MacOS_x64 ]; then tar_args+=("-C" "releases/macos_x64" "RiiTag-RPC_MacOS_x64"); fi
+          if [ -f releases/windows_x64/RiiTag-RPC_Windows_x64.exe ]; then tar_args+=("-C" "releases/windows_x64" "RiiTag-RPC_Windows_x64.exe"); fi
           if [ ${#tar_args[@]} -gt 0 ]; then tar -cjf all-artifacts.tar.bz2 "${tar_args[@]}"; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
       - name: Publish all-artifacts tarball
         if: steps.tar.outputs.artifact_exists == 'true'

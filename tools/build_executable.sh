@@ -28,6 +28,6 @@ rm -rf "$ROOT_DIR/dist" "$ROOT_DIR/build" "$ROOT_DIR/start.spec"
 
 echo "[packaging] Building..."
 # PyInstaller add-data syntax on Linux: source:destination
-pyinstaller --onefile --add-data "${banner_file}:." --add-data "${config_file}:." "$ROOT_DIR/start.py"
+pyinstaller --onefile --name "RiiTag-RPC_Linux_x64" --add-data "${banner_file}:." --add-data "${config_file}:." "$ROOT_DIR/start.py"
 
 echo "[packaging] Done. Executable is in $ROOT_DIR/dist/start (Linux)."
