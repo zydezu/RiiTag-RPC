@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import webbrowser
+import html
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -420,6 +421,11 @@ class SetupMenu(Menu):
 
         copy_btn = Button("Copy URL", handler=lambda: self._copy_auth_url(auth_url))
         self.waiting_layout = HSplit([msg_window, copy_btn])
+        # Ensure the Copy URL button is reachable via keyboard navigation
+        try:
+            self.app.layout.focus(copy_btn)
+        except Exception:
+            pass
 
         self.update()
         code = self.app.oauth_client.wait_for_code()
@@ -463,9 +469,11 @@ class SetupMenu(Menu):
             msg = "Copied login URL to clipboard."
         else:
             msg = "Clipboard not available. Please manually copy the URL:\n" + url
+        # Safely render UI message by escaping HTML and replacing newlines
+        safe_html = html.escape(msg).replace('\n', '<br/>')
         self.waiting_layout.children.append(
             Window(
-                FormattedTextControl(HTML(msg)),
+                FormattedTextControl(HTML(safe_html)),
                 align=WindowAlign.CENTER,
                 wrap_lines=False,
             )
