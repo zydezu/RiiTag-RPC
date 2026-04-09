@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RiiTag-RPC_Linux_x64
-          path: dist/start
+          path: dist/RiiTag-RPC_Linux_x64
 
   linux_arm64:
     name: Build Linux ARM64
@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RiiTag-RPC_Linux_ARM64
-          path: dist/start
+          path: dist/RiiTag-RPC_Linux_ARM64
 
   macos_x64:
     name: Build macOS x64
@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RiiTag-RPC_Windows_x64
-          path: dist/start.exe
+          path: dist/RiiTag-RPC_Windows_x64.exe
 
   Publish_and_Release:
     name: Publish and Release (All Artifacts)
@@ -151,14 +151,14 @@ jobs:
       - name: Download per-target artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-22.04-x64
-          path: ubuntu22
+          name: linux_x64
+          path: linux_x64
         continue-on-error: true
       - name: Download per-target artifacts (ARM64)
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-24.04-x64
-          path: ubuntu24
+          name: linux_arm64
+          path: linux_arm64
         continue-on-error: true
       - name: Download per-target artifacts (macOS)
         uses: actions/download-artifact@v4
@@ -175,16 +175,16 @@ jobs:
       - name: Collect artifacts into releases
         run: |
           mkdir -p releases
-          cp -r ubuntu22 releases/linux_x64
-          cp -r ubuntu24 releases/linux_arm64
+          cp -r linux_x64 releases/linux_x64
+          cp -r linux_arm64 releases/linux_arm64
           cp -r macos releases/macOS_x64
           cp -r Windows releases/windows_x64
       - name: Create all-artifacts tarball
         id: tar
         run: |
           tar_args=()
-          if [ -f releases/linux_x64/start ]; then tar_args+=("-C" "releases/linux_x64" "start"); fi
-          if [ -f releases/linux_arm64/start ]; then tar_args+=("-C" "releases/linux_arm64" "start"); fi
+          if [ -f releases/linux_x64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_x64" "riitag-rpc"); fi
+          if [ -f releases/linux_arm64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_arm64" "riitag-rpc"); fi
           if [ -f releases/macOS_x64/riitag-rpc ]; then tar_args+=("-C" "releases/macOS_x64" "riitag-rpc"); fi
           if [ -f releases/windows_x64/riitag-rpc.exe ]; then tar_args+=("-C" "releases/windows_x64" "riitag-rpc.exe"); fi
           if [ ${#tar_args[@]} -gt 0 ]; then tar -cjf all-artifacts.tar.bz2 "${tar_args[@]}"; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi

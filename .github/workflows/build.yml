@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-22.04, ubuntu-24.04, macos-13]
+        os: [windows-2022, ubuntu-22.04, ubuntu-24.04, macos-13-x64]
 
     steps:
     - name: Obtain latest version of the repository
@@ -32,7 +32,7 @@ jobs:
       with:
         name: ${{ matrix.os }}-x64
         path: dist
-  
+
   Build-RPI:
     runs-on: ubuntu-22.04
     strategy:
@@ -65,69 +65,53 @@ jobs:
         name: rpi-4b-aarch64
         path: dist
 
-  Collect-Artifacts:
-    runs-on: ubuntu-22.04
+  Publish_and_Release:
+    name: Publish and Release (All Artifacts)
     needs: [Build-PC, Build-RPI]
+    runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Download ubuntu-22.04-x64
         uses: actions/download-artifact@v4
         with:
           name: ubuntu-22.04-x64
           path: ubuntu22
-
       - name: Download ubuntu-24.04-x64
         uses: actions/download-artifact@v4
         with:
           name: ubuntu-24.04-x64
           path: ubuntu24
-
       - name: Download macos-13-x64
         uses: actions/download-artifact@v4
         with:
           name: macos-13-x64
           path: macos
-
       - name: Download windows-2022-x64
         uses: actions/download-artifact@v4
         with:
           name: windows-2022-x64
           path: windows
-
       - name: Download rpi-4b-aarch64
         uses: actions/download-artifact@v4
         with:
           name: rpi-4b-aarch64
           path: rpi4b
-
-      - name: Get environment variables
-        id: get_repository_name
-        run: |
-          echo REPOSITORY_NAME=$(echo "$GITHUB_REPOSITORY" | awk -F / '{print $2}' | sed -e "s/:refs//") >> $GITHUB_ENV
-          echo DATETIME=$(echo $(date '+%Y%m%d-%H%M%S')) >> $GITHUB_ENV
-      
       - name: Collect artifacts
         run: |
           mkdir -p releases
-          mv ubuntu22/riitag-rpc     releases/RiiTag-RPC_Ubuntu22
-          mv ubuntu24/riitag-rpc     releases/RiiTag-RPC_Ubuntu24
-          mv    macos/riitag-rpc     releases/RiiTag-RPC_MacOS
-          mv  windows/riitag-rpc.exe releases/RiiTag-RPC_Windows.exe
+          mv ubuntu22/riitag-rpc     releases/RiiTag-RPC_Linux_x64
+          mv ubuntu24/riitag-rpc     releases/RiiTag-RPC_Linux_ARM64
+          mv    macos/riitag-rpc     releases/RiiTag-RPC_MacOS_x64
+          mv  windows/riitag-rpc.exe releases/RiiTag-RPC_Windows_x64.exe
           mv    rpi4b/riitag-rpc     releases/RiiTag-RPC_Rpi4B
           chmod -R +x releases/
-          tar -cvf all-artifacts.tar.bz2 releases/
-
-      - name: Publish collected artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-artifacts
-          path: all-artifacts.tar.bz2
-
       - name: Create release
+        if: always()
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
+          tag_name: ${{ github.run_number }}
           draft: false
           prerelease: true
           generate_release_notes: true
-          name: Nightly-${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
+          name: RiiTag-RPC Build #${{ github.run_number }}
           files: releases/*
