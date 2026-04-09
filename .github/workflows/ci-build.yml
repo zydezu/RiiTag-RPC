@@ -34,9 +34,7 @@ jobs:
           source .venv/bin/activate
           pip install pyinstaller
       - name: Build Linux executable
-        run: |
-          bash tools/build_executable.sh
-          mv dist/riitag-rpc dist/RiiTag-RPC_Linux_x64
+        run: bash tools/build_executable.sh
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
