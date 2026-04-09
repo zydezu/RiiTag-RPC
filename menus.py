@@ -767,10 +767,14 @@ class MainMenu(Menu):
         self.update()
 
     def view_riitag(self):
+        # Open the Riitag page in an external browser without mutating UI text
         client_id = self.app.user.id
         tag_url = f"https://riitag.t0g3pii.de/{client_id}"
         try:
-            webbrowser.open(tag_url)
+            if shutil.which("xdg-open"):
+                subprocess.run(["xdg-open", tag_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                webbrowser.open(tag_url)
         except webbrowser.Error:
             self.app.show_message(
                 "Title",

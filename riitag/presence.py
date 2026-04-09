@@ -17,29 +17,26 @@ def format_presence(riitag_info: RiitagInfo):
     title = resolver.resolve(last_played.console, last_played.game_id)
 
     return {
-        'details': f'Playing {title.name}',
-        'state': f'Playing on {title.console_name}',
-        'start': start_timestamp,
-
-        'large_image': title.get_cover_url(),
-        'large_text': title.name,
-
-        'small_image': 'logo',
-        'small_text': 'riitag.t0g3pii.de',
-
-        'buttons': [
-            {'label': 'View RiiTag', 'url': f'https://riitag.t0g3pii.de/user/{riitag_info.id}'}
-        ]
+        "details": f"Playing {title.name}",
+        "state": f"Playing on {title.console_name}",
+        "start": start_timestamp,
+        "large_image": title.get_cover_url(),
+        "large_text": title.name,
+        "small_image": "logo",
+        "small_text": "riitag.t0g3pii.de",
+        "buttons": [
+            {
+                "label": "View RiiTag",
+                "url": f"https://riitag.t0g3pii.de/user/{riitag_info.id}",
+            }
+        ],
     }
 
 
 class RPCHandler:
     def __init__(self, client_id, on_error=None):
         self._presence = pypresence.Presence(
-            client_id=client_id,
-            response_timeout=5,
-            connection_timeout=5,
-            handler=None
+            client_id=client_id, response_timeout=5, connection_timeout=5, handler=None
         )
 
         self._on_error = on_error

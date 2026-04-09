@@ -8,15 +8,22 @@ from pypresence.exceptions import PyPresenceException
 
 from .exceptions import RiitagNotFoundError
 from .preferences import Preferences
-from .user import User, RiitagInfo
+from .user import RiitagInfo, User
 
 if TYPE_CHECKING:
     from start import RiiTagApplication
 
 
 class RiitagWatcher(Thread):
-    def __init__(self, preferences: Preferences, user: User,
-                 update_callback, message_callback, *args, **kwargs):
+    def __init__(
+        self,
+        preferences: Preferences,
+        user: User,
+        update_callback,
+        message_callback,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs, daemon=True)
 
         self.preferences = preferences
@@ -25,7 +32,9 @@ class RiitagWatcher(Thread):
         self._message_callback = message_callback
 
         self._run = True
-        self._last_check = datetime(year=2000, month=1, day=1)  # force check on first run
+        self._last_check = datetime(
+            year=2000, month=1, day=1
+        )  # force check on first run
         self._no_riitag_warning_shown = False
 
         self._last_riitag: RiitagInfo = RiitagInfo()
@@ -53,8 +62,8 @@ class RiitagWatcher(Thread):
             if not self._no_riitag_warning_shown:
                 app: RiiTagApplication = get_app()
                 app.show_message(
-                    'RiiTag not found',
-                    'We couldn\'t find your RiiTag.\n\nTo create one, please visit https://riitag.t0g3pii.de/'
+                    "RiiTag not found",
+                    "We couldn't find your RiiTag.\n\nTo create one, please visit https://riitag.t0g3pii.de/",
                 )
 
             return RiitagInfo()
@@ -80,7 +89,9 @@ class RiitagWatcher(Thread):
 
             if self._last_riitag:
                 last_play_time = self._last_riitag.last_played.time
-                if not last_play_time or now - last_play_time >= timedelta(minutes=self.presence_timeout):
+                if not last_play_time or now - last_play_time >= timedelta(
+                    minutes=self.presence_timeout
+                ):
                     new_riitag.outdated = True
 
             if new_riitag != self._last_riitag:

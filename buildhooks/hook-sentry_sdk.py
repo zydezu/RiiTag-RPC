@@ -11,8 +11,7 @@ hiddenimports = [
     "sentry_sdk.integrations.logging",
     "sentry_sdk.integrations.threading",
     "sentry_sdk.integrations.django",
-
     "packaging.version",
     "packaging.specifiers",
-    "packaging.requirements"
+    "packaging.requirements",
 ]

@@ -4,18 +4,18 @@ import requests
 
 from .exceptions import RiitagNotFoundError
 
-RIITAG_ENDPOINT = 'https://riitag.t0g3pii.de/{}/json'
-HEADERS = {'User-Agent': 'RiiTag-RPC WatchThread v2'}
+RIITAG_ENDPOINT = "https://riitag.t0g3pii.de/{}/json"
+HEADERS = {"User-Agent": "RiiTag-RPC WatchThread v2"}
 
 
 class RiitagGame:
     def __init__(self, **kwargs):
-        self.game_id = kwargs.get('game_id')
-        self.console = kwargs.get('console')
-        self.region = kwargs.get('region')
-        self.cover_url = kwargs.get('cover_url')
+        self.game_id = kwargs.get("game_id")
+        self.console = kwargs.get("console")
+        self.region = kwargs.get("region")
+        self.cover_url = kwargs.get("cover_url")
 
-        self.time = kwargs.get('time')
+        self.time = kwargs.get("time")
         if self.time:
             self.time = datetime.datetime.utcfromtimestamp(self.time)
 
@@ -25,11 +25,11 @@ class RiitagGame:
 
 class RiitagInfo:
     def __init__(self, **kwargs):
-        self.name = kwargs.get('user', {}).get('name')
-        self.id = kwargs.get('user', {}).get('id')
-        self.games = kwargs.get('game_data', {}).get('games', [])
+        self.name = kwargs.get("user", {}).get("name")
+        self.id = kwargs.get("user", {}).get("id")
+        self.games = kwargs.get("game_data", {}).get("games", [])
 
-        last_played = kwargs.get('game_data', {}).get('last_played') or {}
+        last_played = kwargs.get("game_data", {}).get("last_played") or {}
         self.last_played = RiitagGame(**last_played)
 
         self.outdated = False
@@ -45,8 +45,8 @@ class RiitagInfo:
 
 
 class RiitagTitleResolver:
-    WII_TITLES_URL = 'https://www.gametdb.com/wiitdb.txt?LANG=EN'
-    WIIU_TITLES_URL = 'https://www.gametdb.com/wiiutdb.txt?LANG=EN'
+    WII_TITLES_URL = "https://www.gametdb.com/wiitdb.txt?LANG=EN"
+    WIIU_TITLES_URL = "https://www.gametdb.com/wiiutdb.txt?LANG=EN"
 
     UPDATE_EVERY = datetime.timedelta(days=1)
 
@@ -64,16 +64,16 @@ class RiitagTitleResolver:
     def update(self):
         wii_db = self._get_data(self.WII_TITLES_URL)
         for game_id, name in wii_db.items():
-            self.game_ids[('wii', game_id)] = name
+            self.game_ids[("wii", game_id)] = name
 
         wiiu_db = self._get_data(self.WIIU_TITLES_URL)
         for game_id, name in wiiu_db.items():
-            self.game_ids[('wiiu', game_id)] = name
+            self.game_ids[("wiiu", game_id)] = name
 
         self._last_update = datetime.datetime.now()
 
     def get_game_name(self, console: str, game_id: str):
-        return self.game_ids.get((console.lower(), game_id.upper()), 'Unknown')
+        return self.game_ids.get((console.lower(), game_id.upper()), "Unknown")
 
     def resolve(self, console: str, game_id: str):
         self.update_maybe()
@@ -92,8 +92,8 @@ class RiitagTitleResolver:
     def _parse_db(self, db: str):
         res = {}
         for line in db.splitlines():
-            game_id, title = line.split(' = ')
-            if game_id == 'TITLES':
+            game_id, title = line.split(" = ")
+            if game_id == "TITLES":
                 continue
 
             res[game_id] = title
@@ -101,28 +101,18 @@ class RiitagTitleResolver:
 
 
 class RiitagTitle:
-    COVER_URL = 'https://art.gametdb.com/{console}/{img_type}/{region}/{game_id}.{file_type}'
-    NOTFOUND_URL = 'https://discord.dolphin-emu.org/cover-art/unknown.png'
-    IMG_TYPES = (
-        'coverHQ',
-        'cover',
-        'cover3D',
-        'disc',
-        'discM'
+    COVER_URL = (
+        "https://art.gametdb.com/{console}/{img_type}/{region}/{game_id}.{file_type}"
     )
+    NOTFOUND_URL = "https://discord.dolphin-emu.org/cover-art/unknown.png"
+    IMG_TYPES = ("coverHQ", "cover", "cover3D", "disc", "discM")
     CONSOLE_NAMES = {
-        'wii': 'Wii',
-        'wiiu': 'Wii U',
+        "wii": "Wii",
+        "wiiu": "Wii U",
     }
-    REGION = (
-        'EN',
-        'US',
-        'JA'
-    )
-    FILE_TYPES = (
-        'png',
-        'jpg'
-    )
+    REGION = ("EN", "US", "JA")
+    FILE_TYPES = ("png", "jpg")
+
     def __init__(self, resolver: RiitagTitleResolver, console: str, game_id: str):
         self._resolver = resolver
 
@@ -148,7 +138,7 @@ class RiitagTitle:
                             img_type=img_type,
                             game_id=self.game_id,
                             file_type=file_type,
-                            region=region
+                            region=region,
                         )
                         r = requests.head(url)
                     except requests.RequestException:
@@ -163,11 +153,11 @@ class RiitagTitle:
 class User:
     def __init__(self, **kwargs):
         """Represents a RiiTag / Discord user."""
-        self.id = kwargs.get('id')
-        self.username = kwargs.get('username')
-        self.discriminator = kwargs.get('discriminator')
-        self.avatar = kwargs.get('avatar')
-        self.locale = kwargs.get('locale')
+        self.id = kwargs.get("id")
+        self.username = kwargs.get("username")
+        self.discriminator = kwargs.get("discriminator")
+        self.avatar = kwargs.get("avatar")
+        self.locale = kwargs.get("locale")
 
         self.riitag = None
 
@@ -183,7 +173,7 @@ class User:
             return
 
         data = r.json()
-        if error := data.get('error'):
+        if error := data.get("error"):
             raise RiitagNotFoundError(error)
 
         riitag = RiitagInfo(**data)

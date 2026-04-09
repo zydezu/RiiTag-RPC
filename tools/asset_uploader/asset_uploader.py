@@ -10,9 +10,13 @@ import requests
 RANKING_FILE = "riitag_most_popular.txt"  # path to the ranking file.
 DOWNLOAD_COUNT = 30  # only download the top n images.
 
-AUTO_UPLOAD = True  # If set to True, automatically uploads the images to a Discord application.
+AUTO_UPLOAD = (
+    True  # If set to True, automatically uploads the images to a Discord application.
+)
 OUT_DIR = "assets/"  # Where to save the downloaded images. Can be empty.
-ASSET_NAME = "game_{game_id}"  # name of the asset, use {game_id} as placeholder for the game ID.
+ASSET_NAME = (
+    "game_{game_id}"  # name of the asset, use {game_id} as placeholder for the game ID.
+)
 
 # DISCORD_* settings require AUTO_UPLOAD to be set to True.
 DISCORD_TOKEN = ""
@@ -24,13 +28,16 @@ DISCORD_APP_ID = "749633517813628968"  # Application ID to upload the assets to
 
 COVER_URL = "https://art.gametdb.com/{console}/{cover}/{region}/{game}.{ext}"
 
-ASSET_UPLOAD_URL = f"https://discord.com/api/v8/oauth2/applications/{DISCORD_APP_ID}/assets"
+ASSET_UPLOAD_URL = (
+    f"https://discord.com/api/v8/oauth2/applications/{DISCORD_APP_ID}/assets"
+)
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0"
 
 
 ##############################
 # Code n stuff no modify plz #
 ##############################
+
 
 class RiitagGame:
     def __init__(self, game_id, play_count):
@@ -73,7 +80,7 @@ class RiitagGame:
             cover=self.cover_type,
             region=self.region,
             game=self.game_id,
-            ext=self.img_extension
+            ext=self.img_extension,
         )
 
 
@@ -87,10 +94,7 @@ class DiscordAsset:
         return self.name == other.name if isinstance(other, DiscordAsset) else False
 
     def remove(self):
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Authorization": DISCORD_TOKEN
-        }
+        headers = {"User-Agent": USER_AGENT, "Authorization": DISCORD_TOKEN}
         url = f"{ASSET_UPLOAD_URL}/{self.id}"
 
         r = requests.delete(url, headers=headers)
@@ -106,15 +110,12 @@ def download_cover(game: RiitagGame):
 
 
 def upload_asset(file, name):
-    headers = {
-        "User-Agent": USER_AGENT,
-        "Authorization": DISCORD_TOKEN
-    }
-    base64_image = base64.b64encode(file.read()).decode('utf-8')
+    headers = {"User-Agent": USER_AGENT, "Authorization": DISCORD_TOKEN}
+    base64_image = base64.b64encode(file.read()).decode("utf-8")
     payload = {
         "image": f"data:image/png;base64,{base64_image}",
         "name": name,
-        "type": "1"
+        "type": "1",
     }
 
     r = requests.post(ASSET_UPLOAD_URL, headers=headers, json=payload)
@@ -124,10 +125,7 @@ def upload_asset(file, name):
 
 
 def get_assets():
-    headers = {
-        "User-Agent": USER_AGENT,
-        "Authorization": DISCORD_TOKEN
-    }
+    headers = {"User-Agent": USER_AGENT, "Authorization": DISCORD_TOKEN}
 
     r = requests.get(ASSET_UPLOAD_URL, headers=headers)
     r.raise_for_status()
@@ -140,10 +138,7 @@ def parse_rankings(fp, max_results):
     with open(fp) as file:
         for line in file:
             count, game_id = line.split()
-            game = RiitagGame(
-                play_count=int(count),
-                game_id=game_id.strip()
-            )
+            game = RiitagGame(play_count=int(count), game_id=game_id.strip())
             games.append(game)
 
     games = sorted(games, key=lambda g: g.play_count, reverse=True)
@@ -161,7 +156,11 @@ def main():
     app_assets = get_assets()
 
     for n, game in enumerate(games):
-        print(f"({n + 1}/{DOWNLOAD_COUNT}) Downloading {game.game_id}...", end="\r", flush=True)
+        print(
+            f"({n + 1}/{DOWNLOAD_COUNT}) Downloading {game.game_id}...",
+            end="\r",
+            flush=True,
+        )
 
         status = "SUCCESS"
 
@@ -184,14 +183,21 @@ def main():
                 asset for asset in app_assets if asset.name == asset_name
             ]:
                 for num, asset in enumerate(existing_assets):
-                    print(f"({n + 1}/{DOWNLOAD_COUNT}) Removing dupe asset {num}/{len(existing_assets)}...",
-                          end="\r", flush=True)
+                    print(
+                        f"({n + 1}/{DOWNLOAD_COUNT}) Removing dupe asset {num}/{len(existing_assets)}...",
+                        end="\r",
+                        flush=True,
+                    )
 
                     asset.remove()
 
                 print(" " * 40, end="\r")
 
-            print(f"({n + 1}/{DOWNLOAD_COUNT}) Uploading {game.game_id}...", end="\r", flush=True)
+            print(
+                f"({n + 1}/{DOWNLOAD_COUNT}) Uploading {game.game_id}...",
+                end="\r",
+                flush=True,
+            )
 
             try:
                 upload_asset(cover, asset_name)
@@ -211,5 +217,5 @@ def main():
             print(f"=> {game.game_id} - {game.cover_url}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

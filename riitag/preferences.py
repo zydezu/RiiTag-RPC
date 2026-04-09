@@ -4,10 +4,7 @@ import os
 
 
 class Preferences:
-    DEFAULTS = {
-        'check_interval': 10,
-        'presence_timeout': 30
-    }
+    DEFAULTS = {"check_interval": 10, "presence_timeout": 30}
 
     def __init__(self, **values):
         self._values = values
@@ -26,7 +23,7 @@ class Preferences:
             return cls(**data)
 
     def save(self, fn):
-        with open(fn, 'w+') as file:
+        with open(fn, "w+") as file:
             json.dump(self._values, file, indent=4)
 
     def get(self, value):
@@ -37,16 +34,16 @@ class Preferences:
 
     @property
     def check_interval(self):
-        return self.get('check_interval')
+        return self.get("check_interval")
 
     @check_interval.setter
     def check_interval(self, value):
-        self._values['check_interval'] = value
+        self._values["check_interval"] = value
 
     @property
     def presence_timeout(self):
-        return self.get('presence_timeout')
+        return self.get("presence_timeout")
 
     @presence_timeout.setter
     def presence_timeout(self, value):
-        self._values['presence_timeout'] = value
+        self._values["presence_timeout"] = value
