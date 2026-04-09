@@ -1,0 +1,69 @@
+name: Build Binaries
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  linux_x64:
+    name: Build Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+      - name: Install PyInstaller
+        run: |
+          source .venv/bin/activate
+          pip install pyinstaller
+      - name: Build Linux executable
+        run: |
+          bash tools/build_executable.sh
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiiTag-RPC_Linux_x64
+          path: dist/start
+
+  windows_x64:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Setup venv
+        run: |
+          python -m venv .venv
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+      - name: Install PyInstaller
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          pip install pyinstaller
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiiTag-RPC_Windows_x64
+          path: dist/start.exe

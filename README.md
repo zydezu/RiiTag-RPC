@@ -24,3 +24,16 @@ RiiConnect24 is not affiliated with any of these projects. Please report any iss
 
 ## Reporting Issues
 Please report any bugs by [creating an issue](https://github.com/t0g3pii/RiiTag-RPC/issues/new).
+Packaging
+---------
+- This project can be packaged as a standalone executable for Linux (and Windows with some caveats).
+- Linux (single-file):
+  - Prereqs: Python 3.8+, PyInstaller
+  - Run: ./tools/build_executable.sh
+  - Output: dist/start (Linux)
+- Windows: build should be performed on Windows (or a Windows CI) using PyInstaller:
+  - Ensure data files banner.txt and config.json are included via --add-data, similar to Linux:
+    pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+  - Output: dist/start.exe
+- Data files: The app loads banner.txt and config.json at runtime; packaging scripts include these as data assets.
+- If you want cross-platform builds, we can add a cross-compile workflow or a Nuitka-based approach.
