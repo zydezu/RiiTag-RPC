@@ -16,6 +16,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           python -m venv .venv
@@ -34,6 +41,67 @@ jobs:
         with:
           name: RiiTag-RPC_Linux_x64
           path: dist/start
+
+  linux_arm64:
+    name: Build Linux ARM64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build on ARM64 using arm-runner
+        uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: raspios_lite_arm64:latest
+          cpu: cortex-a53
+          cpu_info: cpuinfo/raspberrypi_4b
+          bind_mount_repository: true
+          commands: |
+            sudo apt-get update
+            sudo apt-get install -y python3-pip
+            pip3 install --break-system-packages -r requirements.txt
+            pip3 install --break-system-packages pyinstaller
+            pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+      - name: Upload ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiiTag-RPC_Linux_ARM64
+          path: dist/start
+
+  macos_x64:
+    name: Build macOS x64
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: macos-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            macos-pip-
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+      - name: Install PyInstaller
+        run: |
+          source .venv/bin/activate
+          pip install pyinstaller
+      - name: Build macOS executable
+        run: |
+          source .venv/bin/activate
+          pyinstaller --onefile --add-data "banner.txt:." --add-data "config.json:." start.py
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiiTag-RPC_MacOS_x64
+          path: dist/riitag-rpc
+
 
   windows_x64:
     name: Build Windows x64

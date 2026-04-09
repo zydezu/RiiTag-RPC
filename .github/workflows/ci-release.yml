@@ -1,0 +1,125 @@
+name: Release Binaries
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  Release_Linux_X64:
+    name: Linux x64 Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Linux x64 (release)
+        run: |
+          bash tools/build_executable.sh
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x64
+          path: dist/start
+
+  Release_Linux_ARM64:
+    name: Linux ARM64 Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Linux ARM64 (release)
+        uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: raspios_lite_arm64:latest
+          cpu: cortex-a53
+          cpu_info: cpuinfo/raspberrypi_4b
+          bind_mount_repository: true
+          commands: |
+            sudo apt-get update
+            sudo apt-get install -y python3-pip
+            pip3 install --break-system-packages -r requirements.txt
+            pip3 install --break-system-packages pyinstaller
+            pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+      - name: Upload Linux ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_arm64
+          path: dist/start
+
+  Release_MacOS_X64:
+    name: macOS x64 Release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build macOS (release)
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --onefile --add-data "banner.txt:." --add-data "config.json:." start.py
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos_x64
+          path: dist/riitag-rpc
+
+  Release_Windows_X64:
+    name: Windows x64 Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build Windows (release)
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_x64
+          path: dist/start.exe
+
+  Create_Release:
+    name: Create Release and Publish Assets
+    needs: [Release_Linux_X64, Release_Linux_ARM64, Release_MacOS_X64, Release_Windows_X64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts from previous jobs
+        uses: actions/download-artifact@v4
+        with:
+          name: linux_x64
+          path: artifacts/linux_x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux_arm64
+          path: artifacts/linux_arm64
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos_x64
+          path: artifacts/macos_x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows_x64
+          path: artifacts/windows_x64
+      - name: Prepare tarball
+        run: |
+          mkdir -p releases
+          tar -czf all-artifacts.tar.gz -C artifacts/linux_x64 start -C artifacts/linux_arm64 start -C artifacts/macos_x64 riitag-rpc -C artifacts/windows_x64 start.exe
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          name: Release-${{ github.ref_name }}
+          files: all-artifacts.tar.gz
