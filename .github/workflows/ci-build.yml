@@ -180,19 +180,19 @@ jobs:
       - name: Collect artifacts into releases
         run: |
           mkdir -p releases
-          cp -r linux_x64 releases/linux_x64
-          cp -r linux_arm64 releases/linux_arm64
-          cp -r macos releases/macos_x64
-          cp -r Windows releases/windows_x64
+          [ -d linux_x64 ] && cp -r linux_x64/* releases/linux_x64/ || true
+          [ -d linux_arm64 ] && cp -r linux_arm64/* releases/linux_arm64/ || true
+          [ -d macos ] && cp -r macos/* releases/macos_x64/ || true
+          [ -d Windows ] && cp -r Windows/* releases/windows_x64/ || true
       - name: Create all-artifacts tarball
         id: tar
         run: |
-          tar_args=()
-          if [ -f releases/linux_x64/RiiTag-RPC_Linux_x64 ]; then tar_args+=("-C" "releases/linux_x64" "RiiTag-RPC_Linux_x64"); fi
-          if [ -f releases/linux_arm64/RiiTag-RPC_Linux_ARM64 ]; then tar_args+=("-C" "releases/linux_arm64" "RiiTag-RPC_Linux_ARM64"); fi
-          if [ -f releases/macos_x64/RiiTag-RPC_MacOS_x64 ]; then tar_args+=("-C" "releases/macos_x64" "RiiTag-RPC_MacOS_x64"); fi
-          if [ -f releases/windows_x64/RiiTag-RPC_Windows_x64.exe ]; then tar_args+=("-C" "releases/windows_x64" "RiiTag-RPC_Windows_x64.exe"); fi
-          if [ ${#tar_args[@]} -gt 0 ]; then tar -cjf all-artifacts.tar.bz2 "${tar_args[@]}"; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
+          mkdir -p all_artifacts
+          [ -f releases/linux_x64/RiiTag-RPC_Linux_x64 ] && cp releases/linux_x64/RiiTag-RPC_Linux_x64 all_artifacts/ || true
+          [ -f releases/linux_arm64/RiiTag-RPC_Linux_ARM64 ] && cp releases/linux_arm64/RiiTag-RPC_Linux_ARM64 all_artifacts/ || true
+          [ -f releases/macos_x64/RiiTag-RPC_MacOS_x64 ] && cp releases/macos_x64/RiiTag-RPC_MacOS_x64 all_artifacts/ || true
+          [ -f releases/windows_x64/RiiTag-RPC_Windows_x64.exe ] && cp releases/windows_x64/RiiTag-RPC_Windows_x64.exe all_artifacts/ || true
+          if ls all_artifacts/* 1> /dev/null 2>&1; then tar -cjf all-artifacts.tar.bz2 -C all_artifacts .; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
       - name: Publish all-artifacts tarball
         if: steps.tar.outputs.artifact_exists == 'true'
         uses: actions/upload-artifact@v4
