@@ -47,13 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check disk space
-        id: diskspace
-        run: |
-          avail_kb=$(df --output=avail -k / | tail -n1)
-          echo "avail_kb=${avail_kb}" >> $GITHUB_OUTPUT
       - name: Build on ARM64 using arm-runner
-        if: ${{ steps.diskspace.outputs.avail_kb >= 20000000 }}
         uses: pguyot/arm-runner-action@v2
         with:
           base_image: raspios_lite_arm64:latest
@@ -67,11 +61,7 @@ jobs:
             pip3 install --break-system-packages --ignore-installed -r requirements.txt
             pip3 install --break-system-packages --ignore-installed pyinstaller
             pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
-      - name: ARM64 build skipped due to space
-        if: ${{ steps.diskspace.outputs.avail_kb < 20000000 }}
-        run: echo "ARM64 build skipped: not enough disk space (avail_kb=${{ steps.diskspace.outputs.avail_kb }})"
       - name: Upload ARM64 artifact
-        if: ${{ steps.diskspace.outputs.avail_kb >= 20000000 }}
         uses: actions/upload-artifact@v4
         with:
           name: RiiTag-RPC_Linux_ARM64
