@@ -116,6 +116,7 @@ class Menu(metaclass=abc.ABCMeta):
 
     def on_start(self):
         self._task_thread.start()
+
     def get_all_kb(self):
         return self.get_kb()
 
@@ -204,7 +205,8 @@ class SplashScreen(Menu):
     def on_start(self):
         super().on_start()
 
-        self.exec_after(5, self._new_connect)
+        # Start connecting as soon as possible to minimize the loading time.
+        self.exec_after(0, self._new_connect)
 
     def get_kb(self):
         kb = KeyBindings()
@@ -248,6 +250,9 @@ class SplashScreen(Menu):
         self._connect_attempt += 1
 
         self.app.rpc_handler.connect()
+        # verbose progress: show attempt status
+        self.status_str = f"Discord RPC: connect attempt {self._connect_attempt}"
+        self.update()
 
         if not self.app.rpc_handler.is_connected:
             self.status_str = (
@@ -256,13 +261,18 @@ class SplashScreen(Menu):
             )
             self.update()
 
-            time.sleep(4)
+            # Reduce backoff to speed up subsequent retries
+            time.sleep(1)
             self._connect_presence()
         else:
+            self.status_str = "Discord RPC connected. Loading session..."
+            self.update()
             self._login()
 
     def _login(self):
         if self.is_token_cached:
+            self.status_str = "Loading cached token..."
+            self.update()
             with open(get_cache("token.json"), "r") as file:
                 token_data = json.load(file)
             try:
@@ -274,6 +284,8 @@ class SplashScreen(Menu):
                     self.exec_after(0.5, lambda: self._refresh_token(token))
 
                 else:
+                    self.status_str = "Validating token..."
+                    self.update()
                     self.app.token = token
                     try:
                         self.app.user = token.get_user()
@@ -281,11 +293,14 @@ class SplashScreen(Menu):
                         self.app.set_menu(SetupMenu)
 
                         return
-
+                    self.status_str = "Token valid. User loaded."
+                    self.update()
                     self.app.set_menu(MainMenu)
             except KeyError:  # invalid token in cache?
                 self.app.set_menu(SetupMenu)
         else:
+            self.status_str = "Starting login flow..."
+            self.update()
             self.app.set_menu(SetupMenu)
 
 
