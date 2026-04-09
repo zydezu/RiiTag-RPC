@@ -56,8 +56,14 @@ jobs:
           bind_mount_repository: true
           commands: |
             sudo apt-get update
-            sudo apt-get install -y python3-pip
-            sudo apt-get install -y qemu-user-static binfmt-support
+            # Free up space before heavy installs
+            sudo rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* 2>/dev/null || true
+            sudo apt-get install -y --no-install-recommends python3-pip
+            # Avoid installing qemu-user-static on ARM64 host to reduce image size
+            sudo apt-get install -y --no-install-recommends binfmt-support
+            # Optional: clean up to reclaim space after installing
+            sudo apt-get clean
+            sudo rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* 2>/dev/null || true
             pip3 install --break-system-packages --ignore-installed -r requirements.txt
             pip3 install --break-system-packages --ignore-installed pyinstaller
             pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
