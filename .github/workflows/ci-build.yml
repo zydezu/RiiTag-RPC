@@ -156,25 +156,25 @@ jobs:
       - name: Download per-target artifacts
         uses: actions/download-artifact@v4
         with:
-          name: linux_x64
+          name: RiiTag-RPC_Linux_x64
           path: linux_x64
         continue-on-error: true
       - name: Download per-target artifacts (ARM64)
         uses: actions/download-artifact@v4
         with:
-          name: linux_arm64
+          name: RiiTag-RPC_Linux_ARM64
           path: linux_arm64
         continue-on-error: true
       - name: Download per-target artifacts (macOS)
         uses: actions/download-artifact@v4
         with:
-          name: macos_x64
+          name: RiiTag-RPC_MacOS_x64
           path: macos
         continue-on-error: true
       - name: Download per-target artifacts (Windows)
         uses: actions/download-artifact@v4
         with:
-          name: windows_x64
+          name: RiiTag-RPC_Windows_x64
           path: Windows
         continue-on-error: true
       - name: Collect artifacts into releases
