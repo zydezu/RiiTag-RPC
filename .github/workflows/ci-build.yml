@@ -148,21 +148,25 @@ jobs:
         with:
           name: RiiTag-RPC_Linux_x64
           path: artifacts/linux_x64
+        continue-on-error: true
       - name: Download per-target artifacts (ARM64)
         uses: actions/download-artifact@v4
         with:
           name: RiiTag-RPC_Linux_ARM64
           path: artifacts/linux_arm64
+        continue-on-error: true
       - name: Download per-target artifacts (macOS)
         uses: actions/download-artifact@v4
         with:
           name: RiiTag-RPC_MacOS_x64
           path: artifacts/macos_x64
+        continue-on-error: true
       - name: Download per-target artifacts (Windows)
         uses: actions/download-artifact@v4
         with:
           name: RiiTag-RPC_Windows_x64
           path: artifacts/windows_x64
+        continue-on-error: true
       - name: Collect artifacts into releases
         run: |
           mkdir -p releases
@@ -171,9 +175,16 @@ jobs:
           cp -r artifacts/macos_x64 releases/macOS_x64
           cp -r artifacts/windows_x64 releases/windows_x64
       - name: Create all-artifacts tarball
+        id: tar
         run: |
-          tar -cjf all-artifacts.tar.bz2 -C releases .
+          tar_args=()
+          if [ -f releases/linux_x64/start ]; then tar_args+=("-C" "releases/linux_x64" "start"); fi
+          if [ -f releases/linux_arm64/start ]; then tar_args+=("-C" "releases/linux_arm64" "start"); fi
+          if [ -f releases/macOS_x64/riitag-rpc ]; then tar_args+=("-C" "releases/macOS_x64" "riitag-rpc"); fi
+          if [ -f releases/windows_x64/start.exe ]; then tar_args+=("-C" "releases/windows_x64" "start.exe"); fi
+          if [ ${#tar_args[@]} -gt 0 ]; then tar -cjf all-artifacts.tar.bz2 "${tar_args[@]}"; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
       - name: Publish all-artifacts tarball
+        if: steps.tar.outputs.artifact_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: all-artifacts
@@ -183,6 +194,7 @@ jobs:
           echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
           echo "DATETIME=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
       - name: Create release
+        if: steps.tar.outputs.artifact_exists == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
