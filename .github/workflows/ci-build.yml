@@ -146,6 +146,11 @@ jobs:
     name: Publish and Release (All Artifacts)
     if: always()
     runs-on: ubuntu-latest
+    needs:
+      - linux_x64
+      - linux_arm64
+      - macos_x64
+      - windows_x64
     steps:
       - uses: actions/checkout@v4
       - name: Download per-target artifacts
@@ -163,13 +168,13 @@ jobs:
       - name: Download per-target artifacts (macOS)
         uses: actions/download-artifact@v4
         with:
-          name: macos-13-x64
+          name: macos_x64
           path: macos
         continue-on-error: true
       - name: Download per-target artifacts (Windows)
         uses: actions/download-artifact@v4
         with:
-          name: windows-2022-x64
+          name: windows_x64
           path: Windows
         continue-on-error: true
       - name: Collect artifacts into releases
@@ -177,7 +182,7 @@ jobs:
           mkdir -p releases
           cp -r linux_x64 releases/linux_x64
           cp -r linux_arm64 releases/linux_arm64
-          cp -r macos releases/macOS_x64
+          cp -r macos releases/macos_x64
           cp -r Windows releases/windows_x64
       - name: Create all-artifacts tarball
         id: tar
@@ -185,7 +190,7 @@ jobs:
           tar_args=()
           if [ -f releases/linux_x64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_x64" "riitag-rpc"); fi
           if [ -f releases/linux_arm64/riitag-rpc ]; then tar_args+=("-C" "releases/linux_arm64" "riitag-rpc"); fi
-          if [ -f releases/macOS_x64/riitag-rpc ]; then tar_args+=("-C" "releases/macOS_x64" "riitag-rpc"); fi
+          if [ -f releases/macos_x64/riitag-rpc ]; then tar_args+=("-C" "releases/macos_x64" "riitag-rpc"); fi
           if [ -f releases/windows_x64/riitag-rpc.exe ]; then tar_args+=("-C" "releases/windows_x64" "riitag-rpc.exe"); fi
           if [ ${#tar_args[@]} -gt 0 ]; then tar -cjf all-artifacts.tar.bz2 "${tar_args[@]}"; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
       - name: Publish all-artifacts tarball
