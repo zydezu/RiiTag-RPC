@@ -57,6 +57,7 @@ jobs:
           commands: |
             sudo apt-get update
             sudo apt-get install -y python3-pip
+            sudo apt-get install -y qemu-user-static binfmt-support
             pip3 install --break-system-packages --ignore-installed -r requirements.txt
             pip3 install --break-system-packages --ignore-installed pyinstaller
             pyinstaller --onefile --add-data "banner.txt;." --add-data "config.json;." start.py
@@ -135,3 +136,58 @@ jobs:
         with:
           name: RiiTag-RPC_Windows_x64
           path: dist/start.exe
+
+  Publish_and_Release:
+    name: Publish and Release (All Artifacts)
+    needs: [linux_x64, linux_arm64, macos_x64, windows_x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download per-target artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: RiiTag-RPC_Linux_x64
+          path: artifacts/linux_x64
+      - name: Download per-target artifacts (ARM64)
+        uses: actions/download-artifact@v4
+        with:
+          name: RiiTag-RPC_Linux_ARM64
+          path: artifacts/linux_arm64
+      - name: Download per-target artifacts (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: RiiTag-RPC_MacOS_x64
+          path: artifacts/macos_x64
+      - name: Download per-target artifacts (Windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: RiiTag-RPC_Windows_x64
+          path: artifacts/windows_x64
+      - name: Collect artifacts into releases
+        run: |
+          mkdir -p releases
+          cp -r artifacts/linux_x64 releases/linux_x64
+          cp -r artifacts/linux_arm64 releases/linux_arm64
+          cp -r artifacts/macos_x64 releases/macOS_x64
+          cp -r artifacts/windows_x64 releases/windows_x64
+      - name: Create all-artifacts tarball
+        run: |
+          tar -cjf all-artifacts.tar.bz2 -C releases .
+      - name: Publish all-artifacts tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-artifacts
+          path: all-artifacts.tar.bz2
+      - name: Set up release metadata
+        run: |
+          echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+          echo "DATETIME=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          name: Nightly-${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
+          files: all-artifacts.tar.bz2
