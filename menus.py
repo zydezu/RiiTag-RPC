@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import asyncio
+import html
 import json
 import os
 import shutil
@@ -10,7 +11,6 @@ import sys
 import threading
 import time
 import webbrowser
-import html
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -105,8 +105,6 @@ class Menu(metaclass=abc.ABCMeta):
 
             for task in to_delete:
                 self._tasks.remove(task)
-
-            time.sleep(0.5)
 
     def update(self):
         self.app.invalidate()
@@ -263,7 +261,6 @@ class SplashScreen(Menu):
             self.update()
 
             # Reduce backoff to speed up subsequent retries
-            time.sleep(1)
             self._connect_presence()
         else:
             self.status_str = "Discord RPC connected. Loading session..."
@@ -445,7 +442,6 @@ class SetupMenu(Menu):
 
         self.app.user = token.get_user()
 
-        time.sleep(2)
         self.waiting_layout.children = [
             Window(
                 FormattedTextControl(
@@ -459,7 +455,6 @@ class SetupMenu(Menu):
         ]
         self.update()
 
-        time.sleep(2)
         self.app.set_menu(MainMenu)
 
     def _copy_auth_url(self, url: str) -> None:
@@ -470,7 +465,7 @@ class SetupMenu(Menu):
         else:
             msg = "Clipboard not available. Please manually copy the URL:\n" + url
         # Safely render UI message by escaping HTML and replacing newlines
-        safe_html = html.escape(msg).replace('\n', '<br/>')
+        safe_html = html.escape(msg).replace("\n", "<br/>")
         self.waiting_layout.children.append(
             Window(
                 FormattedTextControl(HTML(safe_html)),
