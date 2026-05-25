@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import requests
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent, merge_key_bindings
 from prompt_toolkit.key_binding.bindings.focus import focus_next, focus_previous
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
 from prompt_toolkit.layout.controls import FormattedTextControl
@@ -25,7 +25,6 @@ from sentry_sdk import configure_scope
 
 from riitag import oauth2, presence, user, watcher
 from riitag.util import get_cache, get_cache_dir, resource_path
-
 
 if TYPE_CHECKING:
     from start import RiiTagApplication
@@ -114,7 +113,13 @@ class Menu(metaclass=abc.ABCMeta):
         self._task_thread.start()
 
     def get_all_kb(self):
-        return self.get_kb()
+        global_kb = KeyBindings()
+
+        @global_kb.add("c-c")
+        def _exit_app(event: KeyPressEvent):
+            self.quit_app()
+
+        return merge_key_bindings([self.get_kb(), global_kb])
 
     def on_exit(self):
         self._run = False
@@ -526,11 +531,11 @@ class MainMenu(Menu):
             Box(
                 HSplit(
                     [
-                        self.menu_settings_button,
-                        Label(""),
                         self.menu_view_button,
-                        self.menu_exit_button,
+                        Label(""),
+                        self.menu_settings_button,
                         self.menu_logout_button,
+                        self.menu_exit_button,
                     ]
                 ),
                 padding_left=3,
@@ -582,7 +587,7 @@ class MainMenu(Menu):
     def on_start(self):
         super().on_start()
 
-        self.app.layout.focus(self.menu_settings_button)
+        self.app.layout.focus(self.menu_view_button)
         self._start_thread()
 
     def _build_game_labels(self):
@@ -631,11 +636,11 @@ class MainMenu(Menu):
                             Box(
                                 HSplit(
                                     [
-        Label(
-            HTML("<b>RiiTag Username:</b> {}").format(
-                self.riitag_info.name
-            )
-        ),
+                                        Label(
+                                            HTML("<b>RiiTag Username:</b> {}").format(
+                                                self.riitag_info.name
+                                            )
+                                        ),
                                         Label(
                                             HTML("<b>Discord:</b> {}").format(
                                                 self.app.user.username
@@ -758,7 +763,7 @@ class MainMenu(Menu):
         self.update()
 
         if state == "Menu":
-            self.app.layout.focus(self.menu_settings_button)
+            self.app.layout.focus(self.menu_view_button)
         elif state == "Settings":
             self.app.layout.focus(self.settings_back_button)
 
@@ -770,7 +775,9 @@ class MainMenu(Menu):
         self._layout_dirty = True
 
         if not riitag.outdated:
-            options = presence.format_presence(self.riitag_info, self.app.title_resolver)
+            options = presence.format_presence(
+                self.riitag_info, self.app.title_resolver
+            )
             self.app.rpc_handler.set_presence(**options)
         else:
             self.app.rpc_handler.clear()
@@ -783,15 +790,13 @@ class MainMenu(Menu):
         opened = False
         try:
             if shutil.which("xdg-open"):
-                result = subprocess.run(
+                proc = subprocess.Popen(
                     ["xdg-open", tag_url],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    timeout=5,
                 )
-                opened = result.returncode == 0
-            if not opened:
-                opened = webbrowser.open(tag_url)
+                proc.wait(timeout=10)
+                opened = proc.returncode == 0
         except Exception:
             opened = False
         if not opened:
