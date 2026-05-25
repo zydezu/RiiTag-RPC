@@ -13,9 +13,9 @@ jobs:
 
     steps:
     - name: Obtain latest version of the repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Set up Python 3
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
     - name: Install requirements with PIP
@@ -28,7 +28,7 @@ jobs:
       if: ${{ matrix.os != 'windows-2022' }}
       run: chmod -R +x dist/
     - name: Publish Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.os }}-x64
         path: dist
@@ -44,7 +44,7 @@ jobs:
           cpu_info: cpuinfo/raspberrypi_4b
           base_image: raspios_lite_arm64:latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Build Raspberry pi release
       uses: pguyot/arm-runner-action@v2
       with:
@@ -60,7 +60,7 @@ jobs:
           pyinstaller riitag-rpc.spec
           chmod +x -R dist/
     - name: Publish Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: rpi-4b-aarch64
         path: dist
@@ -70,29 +70,29 @@ jobs:
     needs: [Build-PC, Build-RPI]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Download ubuntu-22.04-x64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-22.04-x64
           path: ubuntu22
       - name: Download ubuntu-24.04-x64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ubuntu-24.04-x64
           path: ubuntu24
       - name: Download macos-13-x64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos-13-x64
           path: macos
       - name: Download windows-2022-x64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-2022-x64
           path: windows
       - name: Download rpi-4b-aarch64
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: rpi-4b-aarch64
           path: rpi4b
@@ -107,7 +107,7 @@ jobs:
           chmod -R +x releases/
       - name: Create release
         if: always()
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.run_number }}
           draft: false

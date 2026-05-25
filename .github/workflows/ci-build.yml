@@ -12,12 +12,12 @@ jobs:
     name: Build Linux x86_64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Cache Python dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
@@ -36,7 +36,7 @@ jobs:
       - name: Build Linux executable
         run: bash tools/build_executable.sh
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RiiTag-RPC_Linux_x64
           path: dist/RiiTag-RPC_Linux_x64
@@ -45,7 +45,7 @@ jobs:
     name: Build Linux ARM64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build on ARM64 using arm-runner
         uses: pguyot/arm-runner-action@v2
         with:
@@ -67,7 +67,7 @@ jobs:
               --add-data "config.json:." \
               start.py
       - name: Upload ARM64 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RiiTag-RPC_Linux_ARM64
           path: dist/RiiTag-RPC_Linux_ARM64
@@ -76,12 +76,12 @@ jobs:
     name: Build macOS x64
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Cache Python dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pip
@@ -103,7 +103,7 @@ jobs:
           source .venv/bin/activate
           pyinstaller --onefile --name "RiiTag-RPC_MacOS_x64" --add-data "banner.txt:." --add-data "config.json:." start.py
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RiiTag-RPC_MacOS_x64
           path: dist/RiiTag-RPC_MacOS_x64
@@ -113,8 +113,8 @@ jobs:
     name: Build Windows x64
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Setup venv
@@ -137,7 +137,7 @@ jobs:
           .\.venv\Scripts\activate.ps1
           pyinstaller --onefile --name "RiiTag-RPC_Windows_x64" --add-data "banner.txt;." --add-data "config.json;." start.py
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RiiTag-RPC_Windows_x64
           path: dist/RiiTag-RPC_Windows_x64.exe
@@ -152,27 +152,27 @@ jobs:
       - macos_x64
       - windows_x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Download per-target artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Linux_x64
           path: linux_x64
         continue-on-error: true
       - name: Download per-target artifacts (ARM64)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Linux_ARM64
           path: linux_arm64
         continue-on-error: true
       - name: Download per-target artifacts (macOS)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_MacOS_x64
           path: macos
         continue-on-error: true
       - name: Download per-target artifacts (Windows)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Windows_x64
           path: Windows
@@ -195,7 +195,7 @@ jobs:
           if ls all_artifacts/* 1> /dev/null 2>&1; then tar -cjf all-artifacts.tar.bz2 -C all_artifacts .; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
       - name: Publish all-artifacts tarball
         if: steps.tar.outputs.artifact_exists == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: all-artifacts
           path: all-artifacts.tar.bz2
@@ -205,7 +205,7 @@ jobs:
           echo "DATETIME=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
       - name: Create release
         if: steps.tar.outputs.artifact_exists == 'true'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
           draft: false
