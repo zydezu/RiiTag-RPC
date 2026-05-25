@@ -22,7 +22,7 @@ from prompt_toolkit.widgets import Button, Frame
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
-from riitag.util import get_cache
+from riitag.util import get_cache, is_bundled, resource_path
 
 nest_asyncio.apply()
 
@@ -83,18 +83,6 @@ except OSError:
     sys.exit(1)
 
 
-def is_bundled():
-    return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
-
-
-# Get resource when frozen with PyInstaller
-# noinspection PyProtectedMember,PyUnresolvedReferences
-def resource_path(relative_path):
-    if is_bundled():
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-
 def get_user_id():
     try:
         with open(get_cache("_uid"), "r") as f:
@@ -139,6 +127,7 @@ class RiiTagApplication(Application):
         self.preferences = preferences.Preferences.load(get_cache("prefs.json"))
         self.oauth_client = oauth2.OAuth2Client(CONFIG.get("oauth2"))
         self.rpc_handler = presence.RPCHandler(CONFIG.get("rpc", {}).get("client_id"))
+        self.title_resolver = user.RiitagTitleResolver()
 
         self.set_menu(menus.SplashScreen)
         set_title(self.version_string)

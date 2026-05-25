@@ -1,9 +1,11 @@
 import datetime
+import logging
 
 import requests
 
 from .exceptions import RiitagNotFoundError
 
+LOG = logging.getLogger(__name__)
 RIITAG_ENDPOINT = "https://riitag.t0g3pii.de/{}/json"
 HEADERS = {"User-Agent": "RiiTag-RPC WatchThread v2"}
 
@@ -17,7 +19,9 @@ class RiitagGame:
 
         self.time = kwargs.get("time")
         if self.time:
-            self.time = datetime.datetime.utcfromtimestamp(self.time)
+            self.time = datetime.datetime.fromtimestamp(
+                self.time, tz=datetime.timezone.utc
+            )
 
     def __bool__(self):
         return bool(self.game_id)
@@ -86,7 +90,8 @@ class RiitagTitleResolver:
             r.raise_for_status()
 
             return self._parse_db(r.text)
-        except requests.RequestException:
+        except requests.RequestException as e:
+            LOG.warning("Failed to fetch GameTDB data from %s: %s", url, e)
             return {}
 
     def _parse_db(self, db: str):
@@ -112,6 +117,7 @@ class RiitagTitle:
     }
     REGION = ("EN", "US", "JA")
     FILE_TYPES = ("png", "jpg")
+    _cover_url_cache: dict[str, str] = {}
 
     def __init__(self, resolver: RiitagTitleResolver, console: str, game_id: str):
         self._resolver = resolver
@@ -129,6 +135,11 @@ class RiitagTitle:
         return self.CONSOLE_NAMES.get(console, console)
 
     def get_cover_url(self):
+        cache_key = f"{self.console}:{self.game_id}"
+        cached = self._cover_url_cache.get(cache_key)
+        if cached:
+            return cached
+
         for img_type in self.IMG_TYPES:
             for region in self.REGION:
                 for file_type in self.FILE_TYPES:
@@ -145,8 +156,10 @@ class RiitagTitle:
                         continue
 
                     if r.status_code == 200:
+                        self._cover_url_cache[cache_key] = url
                         return url
 
+        self._cover_url_cache[cache_key] = self.NOTFOUND_URL
         return self.NOTFOUND_URL
 
 

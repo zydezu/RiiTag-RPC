@@ -101,6 +101,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.handle_400()
             return
         self.server.code = code[0]
+        self.server.code_event.set()
 
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
@@ -134,6 +135,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 class OAuth2HTTPServer(ThreadingHTTPServer):
     def __init__(self, *args, **kwargs):
         self.code = None
+        self.code_event = threading.Event()
 
         super().__init__(*args, **kwargs)
 
@@ -170,9 +172,8 @@ class OAuth2Client:
         if not self._http_server:
             raise RuntimeError("Server not yet started.")
 
-        while True:
-            if code := self._http_server.code:
-                return code
+        self._http_server.code_event.wait()
+        return self._http_server.code
 
     def get_token(self, code):
         payload = {

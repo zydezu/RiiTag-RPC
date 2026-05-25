@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from threading import Thread
 from typing import TYPE_CHECKING
 
@@ -33,7 +33,7 @@ class RiitagWatcher(Thread):
 
         self._run = True
         self._last_check = datetime(
-            year=2000, month=1, day=1
+            year=2000, month=1, day=1, tzinfo=timezone.utc
         )  # force check on first run
         self._no_riitag_warning_shown = False
 
@@ -76,7 +76,7 @@ class RiitagWatcher(Thread):
         while self._run:
             new_riitag = self._last_riitag
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             if now - self._last_check >= timedelta(seconds=self.interval):
                 # time for a new check!
                 self._last_check = now

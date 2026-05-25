@@ -7,7 +7,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import threading
 import time
 import webbrowser
@@ -25,14 +24,7 @@ from prompt_toolkit.widgets import Box, Button, Frame, Label
 from sentry_sdk import configure_scope
 
 from riitag import oauth2, presence, user, watcher
-from riitag.util import get_cache, get_cache_dir
-
-
-# Get resource when frozen with PyInstaller
-def resource_path(relative_path):
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+from riitag.util import get_cache, get_cache_dir, resource_path
 
 
 if TYPE_CHECKING:
@@ -88,6 +80,7 @@ class Menu(metaclass=abc.ABCMeta):
 
         self._run = True
         self._tasks = []
+        self._lock = threading.Lock()
         self._task_thread = threading.Thread(target=self._task_manager, daemon=True)
 
     def _task_manager(self):
@@ -95,23 +88,27 @@ class Menu(metaclass=abc.ABCMeta):
             to_delete = []
 
             curr_time = int(time.time())
-            for task in self._tasks:
-                if curr_time >= task[0]:
-                    task[1]()
-                    to_delete.append(task)
+            with self._lock:
+                for task in self._tasks:
+                    if curr_time >= task[0]:
+                        task[1]()
+                        to_delete.append(task)
+
+                for task in to_delete:
+                    self._tasks.remove(task)
 
             if to_delete:
                 self.update()
 
-            for task in to_delete:
-                self._tasks.remove(task)
+            time.sleep(0.05)
 
     def update(self):
         self.app.invalidate()
 
     def exec_after(self, seconds, callback):
         exec_at = int(time.time()) + seconds
-        self._tasks.append((exec_at, callback))
+        with self._lock:
+            self._tasks.append((exec_at, callback))
 
     def on_start(self):
         self._task_thread.start()
@@ -246,26 +243,32 @@ class SplashScreen(Menu):
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
 
-        self._connect_attempt += 1
+        delay = 0.5
+        max_delay = 30
 
-        self.app.rpc_handler.connect()
-        # verbose progress: show attempt status
-        self.status_str = f"Discord RPC: connect attempt {self._connect_attempt}"
-        self.update()
+        while not self.app.rpc_handler.is_connected:
+            self._connect_attempt += 1
 
-        if not self.app.rpc_handler.is_connected:
+            self.status_str = f"Discord RPC: connect attempt {self._connect_attempt}"
+            self.update()
+
+            self.app.rpc_handler.connect()
+
+            if self.app.rpc_handler.is_connected:
+                break
+
             self.status_str = (
                 f"Trying to connect... ({self._connect_attempt})\n"
                 f"Please make sure your Discord client is running."
             )
             self.update()
 
-            # Reduce backoff to speed up subsequent retries
-            self._connect_presence()
-        else:
-            self.status_str = "Discord RPC connected. Loading session..."
-            self.update()
-            self._login()
+            time.sleep(delay)
+            delay = min(delay * 2, max_delay)
+
+        self.status_str = "Discord RPC connected. Loading session..."
+        self.update()
+        self._login()
 
     def _login(self):
         if self.is_token_cached:
@@ -485,6 +488,8 @@ class MainMenu(Menu):
         super().__init__(*args, **kwargs)
 
         self.riitag_info = user.RiitagInfo()  # placeholder
+        self._cached_game_labels: list = []
+        self._layout_dirty = True
 
         if discord_user := self.app.user:
             with configure_scope() as scope:
@@ -580,9 +585,8 @@ class MainMenu(Menu):
         self.app.layout.focus(self.menu_settings_button)
         self._start_thread()
 
-    # In der get_layout Methode der MainMenu Klasse:
-    def get_layout(self):
-        game_labels = []
+    def _build_game_labels(self):
+        labels = []
         for game in self.riitag_info.games:
             if not game:
                 continue
@@ -595,9 +599,15 @@ class MainMenu(Menu):
                 label_text = HTML("<b>-</b> {} ({})").format(game_id, console.title())
             else:
                 label_text = HTML("<b>-</b> {}").format(console_and_game_id[0])
-            game_labels.append(Label(label_text))
+            labels.append(Label(label_text))
+        self._cached_game_labels = labels
 
-        # RPC Status ermitteln
+    def get_layout(self):
+        if self._layout_dirty:
+            self._build_game_labels()
+            self._layout_dirty = False
+
+        # Determine RPC status
         rpc_status = (
             "Connected" if self.app.rpc_handler.is_connected else "Disconnected"
         )
@@ -621,13 +631,11 @@ class MainMenu(Menu):
                             Box(
                                 HSplit(
                                     [
-                                        # Geändert von "Name" zu "RiiTag Username"
-                                        Label(
-                                            HTML("<b>RiiTag Username:</b> {}").format(
-                                                self.riitag_info.name
-                                            )
-                                        ),
-                                        # Discord Benutzername hinzugefügt
+        Label(
+            HTML("<b>RiiTag Username:</b> {}").format(
+                self.riitag_info.name
+            )
+        ),
                                         Label(
                                             HTML("<b>Discord:</b> {}").format(
                                                 self.app.user.username
@@ -635,16 +643,15 @@ class MainMenu(Menu):
                                                 else "Unknown"
                                             )
                                         ),
-                                        # RPC Status hinzugefügt
                                         Label(
                                             HTML("<b>Status:</b> {}").format(rpc_status)
                                         ),
                                         Label(
                                             HTML("<b>Games:</b> {}").format(
-                                                len(game_labels)
+                                                len(self._cached_game_labels)
                                             )
                                         ),
-                                        *game_labels,
+                                        *self._cached_game_labels,
                                     ]
                                 ),
                                 padding_left=3,
@@ -742,9 +749,12 @@ class MainMenu(Menu):
         self.settings_check_interval_button.value = self.app.preferences.check_interval
         self.settings_check_interval_button.update()
 
+        self._layout_dirty = True
+
     def _set_state(self, state):
         self.right_panel_state = state
 
+        self._layout_dirty = True
         self.update()
 
         if state == "Menu":
@@ -757,9 +767,10 @@ class MainMenu(Menu):
             return
 
         self.riitag_info = riitag
+        self._layout_dirty = True
 
         if not riitag.outdated:
-            options = presence.format_presence(self.riitag_info)
+            options = presence.format_presence(self.riitag_info, self.app.title_resolver)
             self.app.rpc_handler.set_presence(**options)
         else:
             self.app.rpc_handler.clear()
@@ -767,15 +778,23 @@ class MainMenu(Menu):
         self.update()
 
     def view_riitag(self):
-        # Open the Riitag page in an external browser without mutating UI text
         client_id = self.app.user.id
         tag_url = f"https://riitag.t0g3pii.de/{client_id}"
+        opened = False
         try:
             if shutil.which("xdg-open"):
-                subprocess.run(["xdg-open", tag_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            else:
-                webbrowser.open(tag_url)
-        except webbrowser.Error:
+                result = subprocess.run(
+                    ["xdg-open", tag_url],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=5,
+                )
+                opened = result.returncode == 0
+            if not opened:
+                opened = webbrowser.open(tag_url)
+        except Exception:
+            opened = False
+        if not opened:
             self.app.show_message(
                 "Title",
                 "Yikes, that didn't work. Please manually paste this URL into your browser:\n"
@@ -804,24 +823,20 @@ class DebugMenu(Menu):
             "Refresh Data", width=20, handler=self._refresh_data
         )
 
-        # Debug-Statistiken
         self.rpc_connection_attempts = 0
         self.last_error = "None"
         self.last_update_time = "Never"
         self.cache_info = {}
 
-        # Debug-Daten holen
         self._refresh_data()
 
     def _go_back(self):
         self.app.set_menu(MainMenu)
 
     def _refresh_data(self):
-        # RPC-Verbindungsstatistik
         if hasattr(self.app, "_connect_attempt"):
             self.rpc_connection_attempts = self.app._connect_attempt
 
-        # Cache-Informationen sammeln
         cache_dir = get_cache_dir()
         self.cache_info = {
             "directory": cache_dir,
@@ -830,7 +845,6 @@ class DebugMenu(Menu):
             "uid_exists": os.path.exists(get_cache("_uid")),
         }
 
-        # Letzte Aktualisierungszeit holen, falls vorhanden
         if hasattr(self.app, "riitag_watcher") and self.app.riitag_watcher:
             self.last_update_time = self.app.riitag_watcher._last_check.strftime(
                 "%Y-%m-%d %H:%M:%S"
@@ -840,23 +854,19 @@ class DebugMenu(Menu):
 
     def on_start(self):
         super().on_start()
-        # Focus auf den ersten Button beim Start
         self.app.layout.focus(self.back_button)
 
     def get_layout(self):
-        # Ermittle RPC-Status mit Details
         rpc_status = (
             "Connected" if self.app.rpc_handler.is_connected else "Disconnected"
         )
 
-        # Discord-Token-Info
         token_info = "Valid"
         if not self.app.token:
             token_info = "Not available"
         elif self.app.token.needs_refresh:
             token_info = "Needs refresh"
 
-        # RiiTag-Info
         riitag_info = "Valid"
         if (
             not self.app.user
@@ -865,11 +875,9 @@ class DebugMenu(Menu):
         ):
             riitag_info = "Not available"
 
-        # Aktuell angezeigtes Spiel ermitteln
         current_game_info = "Not displaying any game"
         last_played_info = "No game data available"
 
-        # Prüfe, ob riitag_watcher existiert und Daten enthält
         if (
             hasattr(self.app, "riitag_watcher")
             and self.app.riitag_watcher
@@ -878,23 +886,18 @@ class DebugMenu(Menu):
         ):
             last_riitag = self.app.riitag_watcher._last_riitag
 
-            # Prüfe, ob ein Spiel zuletzt gespielt wurde
             if last_riitag.last_played and last_riitag.last_played.game_id:
                 game_id = last_riitag.last_played.game_id
                 console = last_riitag.last_played.console
                 last_played_info = f"{game_id} ({console})"
 
-                # Prüfe, ob das Spiel aktuell angezeigt wird oder veraltet ist
                 if not last_riitag.outdated:
                     current_game_info = f"Displaying: {game_id} ({console})"
                 else:
                     current_game_info = f"Game outdated (timeout): {game_id}"
 
-        # Hier erstellen wir ein Split Layout mit Links- und Rechtsbereich
-        # ähnlich wie im Hauptmenü
         main_content = HSplit(
             [
-                # Prominente Sicherheitswarnung
                 Window(
                     FormattedTextControl(
                         HTML(
@@ -969,8 +972,6 @@ class DebugMenu(Menu):
             ]
         )
 
-        # Rechter Bereich für die Buttons - ähnlich wie im Hauptmenü,
-        # jetzt mit fester Breite für die Buttons
         button_layout = Frame(
             Box(
                 HSplit(
@@ -982,7 +983,7 @@ class DebugMenu(Menu):
                 ),
                 padding_left=3,
                 padding_top=2,
-                width=30,  # Feste Breite für den rechten Bereich
+                width=30,
             ),
             title="Menu",
         )
@@ -990,7 +991,7 @@ class DebugMenu(Menu):
         return VSplit(
             [
                 main_content,
-                button_layout,  # Buttons rechts angeordnet wie im Hauptmenü
+                button_layout,
             ]
         )
 

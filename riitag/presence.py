@@ -4,15 +4,16 @@ import pypresence
 
 from .user import RiitagInfo, RiitagTitleResolver
 
-resolver = RiitagTitleResolver()
 
-
-def format_presence(riitag_info: RiitagInfo):
+def format_presence(riitag_info: RiitagInfo, resolver: RiitagTitleResolver | None = None):
     last_played = riitag_info.last_played
     if not last_played:
         return {}
 
     start_timestamp = calendar.timegm(last_played.time.utctimetuple())
+
+    if resolver is None:
+        resolver = RiitagTitleResolver()
 
     title = resolver.resolve(last_played.console, last_played.game_id)
 
@@ -34,25 +35,16 @@ def format_presence(riitag_info: RiitagInfo):
 
 
 class RPCHandler:
-    def __init__(self, client_id, on_error=None):
+    def __init__(self, client_id):
         self._presence = pypresence.Presence(
             client_id=client_id, response_timeout=5, connection_timeout=5, handler=None
         )
 
-        self._on_error = on_error
-
         self._is_connected = False
-        self._error_count = 0
 
     @property
     def is_connected(self):
         return self._is_connected
-
-    def _error_handler(self, exception, future):
-        self._error_count += 1
-        if self._error_count >= 3:
-            if self._on_error:
-                self._on_error(exception, future)
 
     def connect(self):
         try:

@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 
 CACHE_DIR_NAME = "riitag-rpc"
 
@@ -24,3 +25,13 @@ def get_cache_dir():
 
 def get_cache(filename):
     return os.path.join(get_cache_dir(), filename)
+
+
+def is_bundled():
+    return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+
+
+def resource_path(relative_path):
+    if is_bundled():
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
