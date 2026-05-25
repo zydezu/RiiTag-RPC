@@ -405,7 +405,7 @@ class SetupMenu(Menu):
             msg_window = Window(
                 FormattedTextControl(
                     HTML(
-                        "Looks like that worked. Sweet!\n"
+                        "Browser opened!\n"
                         "Please follow the instructions in your browser."
                     )
                 ),
@@ -416,7 +416,7 @@ class SetupMenu(Menu):
             msg_window = Window(
                 FormattedTextControl(
                     HTML(
-                        "Yikes, that didn't work. Please manually paste this URL into your browser:\n"
+                        "Something went wrong... Please manually paste this URL into your browser:\n"
                         + auth_url
                     )
                 ),
@@ -802,8 +802,8 @@ class MainMenu(Menu):
         if not opened:
             self.app.show_message(
                 "Title",
-                "Yikes, that didn't work. Please manually paste this URL into your browser:\n"
-                + tag_url,
+                "Please manually open this URL in your browser:\n" + tag_url,
+                ok_only=True,
             )
 
     def _start_thread(self):

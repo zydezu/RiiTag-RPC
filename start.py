@@ -194,8 +194,7 @@ class RiiTagApplication(Application):
             self.invalidate()
         self._current_menu.on_start()
 
-    def show_message(self, title, message, callback=None):
-        cancel_button = Button("Cancel", handler=lambda: response_received(False))
+    def show_message(self, title, message, callback=None, ok_only=False):
         ok_button = Button("OK", handler=lambda: response_received(True))
 
         def response_received(is_ok):
@@ -206,6 +205,11 @@ class RiiTagApplication(Application):
             self.layout.focus_next()
             self.invalidate()
 
+        buttons = [ok_button] if ok_only else [
+            Button("Cancel", handler=lambda: response_received(False)),
+            ok_button,
+        ]
+
         message_frame = Frame(
             HSplit(
                 [
@@ -213,9 +217,7 @@ class RiiTagApplication(Application):
                         FormattedTextControl(HTML(message + "\n\n")),
                         align=WindowAlign.CENTER,
                     ),
-                    VSplit(
-                        [cancel_button, ok_button], padding=3, align=WindowAlign.CENTER
-                    ),
+                    VSplit(buttons, padding=3, align=WindowAlign.CENTER),
                 ],
                 padding=1,
             ),
@@ -223,7 +225,7 @@ class RiiTagApplication(Application):
         )
 
         self._float_message_layout = message_frame
-        self.layout.focus(cancel_button)
+        self.layout.focus(ok_button)
         self.invalidate()
 
 
