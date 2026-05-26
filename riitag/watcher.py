@@ -97,8 +97,7 @@ class RiitagWatcher(Thread):
             if new_riitag != self._last_riitag:
                 try:
                     self._update_callback(new_riitag)
-                except PyPresenceException:
-                    # failed to set presence. We will retry later.
+                except (PyPresenceException, OSError):
                     time.sleep(5)
                     continue
 
