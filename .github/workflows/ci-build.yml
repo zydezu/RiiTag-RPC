@@ -146,6 +146,8 @@ jobs:
     name: Publish and Release (All Artifacts)
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - linux_x64
       - linux_arm64
@@ -153,58 +155,42 @@ jobs:
       - windows_x64
     steps:
       - uses: actions/checkout@v6
-      - name: Download per-target artifacts
+      - name: Download Linux x64 artifact
         uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Linux_x64
-          path: linux_x64
+          path: releases
         continue-on-error: true
-      - name: Download per-target artifacts (ARM64)
+      - name: Download Linux ARM64 artifact
         uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Linux_ARM64
-          path: linux_arm64
+          path: releases
         continue-on-error: true
-      - name: Download per-target artifacts (macOS)
+      - name: Download macOS artifact
         uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_MacOS_x64
-          path: macos
+          path: releases
         continue-on-error: true
-      - name: Download per-target artifacts (Windows)
+      - name: Download Windows artifact
         uses: actions/download-artifact@v8
         with:
           name: RiiTag-RPC_Windows_x64
-          path: Windows
+          path: releases
         continue-on-error: true
-      - name: Collect artifacts into releases
+      - name: Check for artifacts
+        id: check
         run: |
-          mkdir -p releases
-          [ -d linux_x64 ] && cp -r linux_x64/* releases/linux_x64/ || true
-          [ -d linux_arm64 ] && cp -r linux_arm64/* releases/linux_arm64/ || true
-          [ -d macos ] && cp -r macos/* releases/macos_x64/ || true
-          [ -d Windows ] && cp -r Windows/* releases/windows_x64/ || true
-      - name: Create all-artifacts tarball
-        id: tar
-        run: |
-          mkdir -p all_artifacts
-          [ -f releases/linux_x64/RiiTag-RPC_Linux_x64 ] && cp releases/linux_x64/RiiTag-RPC_Linux_x64 all_artifacts/ || true
-          [ -f releases/linux_arm64/RiiTag-RPC_Linux_ARM64 ] && cp releases/linux_arm64/RiiTag-RPC_Linux_ARM64 all_artifacts/ || true
-          [ -f releases/macos_x64/RiiTag-RPC_MacOS_x64 ] && cp releases/macos_x64/RiiTag-RPC_MacOS_x64 all_artifacts/ || true
-          [ -f releases/windows_x64/RiiTag-RPC_Windows_x64.exe ] && cp releases/windows_x64/RiiTag-RPC_Windows_x64.exe all_artifacts/ || true
-          if ls all_artifacts/* 1> /dev/null 2>&1; then tar -cjf all-artifacts.tar.bz2 -C all_artifacts .; echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
-      - name: Publish all-artifacts tarball
-        if: steps.tar.outputs.artifact_exists == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: all-artifacts
-          path: all-artifacts.tar.bz2
+          if ls releases/* 1> /dev/null 2>&1; then echo "artifact_exists=true" >> $GITHUB_OUTPUT; else echo "artifact_exists=false" >> $GITHUB_OUTPUT; fi
+      - name: List files
+        run: ls -la releases/ || true
       - name: Set up release metadata
         run: |
           echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
           echo "DATETIME=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
       - name: Create release
-        if: steps.tar.outputs.artifact_exists == 'true'
+        if: steps.check.outputs.artifact_exists == 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
@@ -212,4 +198,8 @@ jobs:
           prerelease: true
           generate_release_notes: true
           name: Nightly-${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
-          files: all-artifacts.tar.bz2
+          files: |
+            releases/RiiTag-RPC_Linux_x64
+            releases/RiiTag-RPC_Linux_ARM64
+            releases/RiiTag-RPC_MacOS_x64
+            releases/RiiTag-RPC_Windows_x64.exe

@@ -8,7 +8,7 @@
 RiiTag-RPC allows you to show your Discord friends what you're playing on your Wii or Wii U by connecting to your [RiiTag](https://riitag.t0g3pii.de/) account.
 
 ## Instructions
-1. Grab the latest release from [here](https://github.com/t0g3pii/RiiTag-RPC/releases/latest).
+1. Grab the latest release from [here](https://github.com/zydezu/RiiTag-RPC/releases/latest).
 2. Follow the instructions available [here](/GUIDE.md#riitag-rpc).
 
 ## Running on Raspberry Pi
@@ -23,7 +23,7 @@ After installing ArmCord and logging in, RiiTag-RPC should work without issues.
 RiiConnect24 is not affiliated with any of these projects. Please report any issues directly to their developers.
 
 ## Reporting Issues
-Please report any bugs by [creating an issue](https://github.com/t0g3pii/RiiTag-RPC/issues/new).
+Please report any bugs by [creating an issue](https://github.com/zydezu/RiiTag-RPC/issues/new).
 Packaging
 ---------
 - This project can be packaged as a standalone executable for Linux (and Windows with some caveats).
