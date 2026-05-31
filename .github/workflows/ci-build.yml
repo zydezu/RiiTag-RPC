@@ -142,6 +142,39 @@ jobs:
           name: RiiTag-RPC_Windows_x64
           path: dist/RiiTag-RPC_Windows_x64.exe
 
+  windows_arm64:
+    name: Build Windows ARM64
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Setup venv
+        run: |
+          python -m venv .venv
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+      - name: Install PyInstaller
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          pip install pyinstaller
+      - name: Build Windows ARM64 executable
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\activate.ps1
+          pyinstaller --onefile --name "RiiTag-RPC_Windows_ARM64" --add-data "banner.txt;." --add-data "config.json;." start.py
+      - name: Upload Windows ARM64 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: RiiTag-RPC_Windows_ARM64
+          path: dist/RiiTag-RPC_Windows_ARM64.exe
+
   Publish_and_Release:
     name: Publish and Release (All Artifacts)
     if: always()
@@ -153,6 +186,7 @@ jobs:
       - linux_arm64
       - macos_x64
       - windows_x64
+      - windows_arm64
     steps:
       - uses: actions/checkout@v6
       - name: Download Linux x64 artifact
@@ -179,6 +213,12 @@ jobs:
           name: RiiTag-RPC_Windows_x64
           path: releases
         continue-on-error: true
+      - name: Download Windows ARM64 artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: RiiTag-RPC_Windows_ARM64
+          path: releases
+        continue-on-error: true
       - name: Check for artifacts
         id: check
         run: |
@@ -203,3 +243,4 @@ jobs:
             releases/RiiTag-RPC_Linux_ARM64
             releases/RiiTag-RPC_MacOS_x64
             releases/RiiTag-RPC_Windows_x64.exe
+            releases/RiiTag-RPC_Windows_ARM64.exe
