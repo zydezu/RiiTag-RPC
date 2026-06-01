@@ -74,7 +74,7 @@ jobs:
 
   macos_x64:
     name: Build macOS x64
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
