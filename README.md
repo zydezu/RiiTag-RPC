@@ -21,8 +21,8 @@ RiiConnect24 is not affiliated with any of these projects. Please report any iss
 
 ## Reporting Issues
 Please report any bugs by [creating an issue](https://github.com/zydezu/RiiTag-RPC/issues/new).
-Packaging
----------
+
+## Packaging
 - This project can be packaged as a standalone executable for Linux (and Windows with some caveats).
 - Linux (single-file):
   - Prereqs: Python 3.8+, PyInstaller
