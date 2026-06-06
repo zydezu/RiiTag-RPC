@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import threading
 import traceback
@@ -205,10 +204,14 @@ class RiiTagApplication(Application):
             self.layout.focus_next()
             self.invalidate()
 
-        buttons = [ok_button] if ok_only else [
-            Button("Cancel", handler=lambda: response_received(False)),
-            ok_button,
-        ]
+        buttons = (
+            [ok_button]
+            if ok_only
+            else [
+                Button("Cancel", handler=lambda: response_received(False)),
+                ok_button,
+            ]
+        )
 
         message_frame = Frame(
             HSplit(

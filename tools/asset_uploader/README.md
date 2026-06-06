@@ -6,7 +6,7 @@ in a rich presence.
 
 It requires you to set various options in the file itself before running.
 These are documented using comments in the same file. If an option is undocumented,
-~~learn how to use your fucking brain~~ it is probably self explanatory enough.
+it is probably self explanatory enough.
 
 The input file is expected to contain the play count and game ID for every game separated
 by a space, each on a new line. Example:
