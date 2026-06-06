@@ -13,26 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - name: Cache Python dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
-      - name: Install PyInstaller
-        run: |
-          source .venv/bin/activate
-          pip install pyinstaller
+      - uses: astral-sh/setup-uv@v5
       - name: Build Linux executable
         run: bash tools/build_executable.sh
       - name: Upload Linux artifact
