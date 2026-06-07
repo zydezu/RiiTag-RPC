@@ -59,12 +59,12 @@ class OAuth2Token:
             "scope": self.scope,
         }
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        r = requests.post(TOKEN_ENDPOINT, data=payload, headers=headers)
+        r = requests.post(TOKEN_ENDPOINT, data=payload, headers=headers, timeout=10)
         r.raise_for_status()
 
         token_data = r.json()
         self.access_token = token_data.pop("access_token")
-        self.refresh_token = token_data.pop("refresh_token")
+        self.refresh_token = token_data.pop("refresh_token", self.refresh_token)
         self.token_type = token_data.pop("token_type")
         self.expires_in = token_data.pop("expires_in")
         self.scope = token_data.pop("scope")

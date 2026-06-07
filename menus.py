@@ -84,19 +84,16 @@ class Menu(metaclass=abc.ABCMeta):
 
     def _task_manager(self):
         while self._run:
-            to_delete = []
-
             curr_time = int(time.time())
             with self._lock:
-                for task in self._tasks:
-                    if curr_time >= task[0]:
-                        task[1]()
-                        to_delete.append(task)
-
-                for task in to_delete:
+                to_run = [task for task in self._tasks if curr_time >= task[0]]
+                for task in to_run:
                     self._tasks.remove(task)
 
-            if to_delete:
+            for task in to_run:
+                task[1]()
+
+            if to_run:
                 self.update()
 
             time.sleep(0.05)
@@ -230,7 +227,7 @@ class SplashScreen(Menu):
 
             self.app.token = token
             self.app.user = token.get_user()
-        except requests.HTTPError:  # token revoked, modified?
+        except (requests.RequestException, KeyError):  # token revoked, network error, bad response
             self.app.set_menu(SetupMenu)
 
             return
