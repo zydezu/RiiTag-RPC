@@ -4,6 +4,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+RiiTag-RPC_Linux_x64.spec
 
 # C extensions
 *.so

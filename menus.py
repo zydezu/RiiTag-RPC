@@ -227,7 +227,10 @@ class SplashScreen(Menu):
 
             self.app.token = token
             self.app.user = token.get_user()
-        except (requests.RequestException, KeyError):  # token revoked, network error, bad response
+        except (
+            requests.RequestException,
+            KeyError,
+        ):  # token revoked, network error, bad response
             self.app.set_menu(SetupMenu)
 
             return
@@ -385,12 +388,13 @@ class SetupMenu(Menu):
         opened = False
         try:
             if shutil.which("xdg-open"):
-                subprocess.run(
+                result = subprocess.run(
                     ["xdg-open", auth_url],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
+                    timeout=5,
                 )
-                opened = True
+                opened = result.returncode == 0
             # Fallback to Python's webbrowser if xdg-open fails
             if not opened:
                 opened = webbrowser.open(auth_url)
@@ -430,7 +434,24 @@ class SetupMenu(Menu):
             pass
 
         self.update()
-        code = self.app.oauth_client.wait_for_code()
+        code = self.app.oauth_client.wait_for_code(timeout=120)
+
+        if code is None:
+            self.waiting_layout.children = [
+                Window(
+                    FormattedTextControl(
+                        HTML(
+                            "Timed out waiting for browser login.\n"
+                            "Please manually open this URL in your browser:\n"
+                            + auth_url
+                        )
+                    ),
+                    align=WindowAlign.CENTER,
+                    wrap_lines=False,
+                )
+            ]
+            self.update()
+            return
 
         self.waiting_layout.children = [
             Window(

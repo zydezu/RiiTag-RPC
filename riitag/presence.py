@@ -5,7 +5,9 @@ import pypresence
 from .user import RiitagInfo, RiitagTitleResolver
 
 
-def format_presence(riitag_info: RiitagInfo, resolver: RiitagTitleResolver | None = None):
+def format_presence(
+    riitag_info: RiitagInfo, resolver: RiitagTitleResolver | None = None
+):
     last_played = riitag_info.last_played
     if not last_played:
         return {}
@@ -18,19 +20,11 @@ def format_presence(riitag_info: RiitagInfo, resolver: RiitagTitleResolver | Non
     title = resolver.resolve(last_played.console, last_played.game_id)
 
     return {
-        "details": f"Playing {title.name}",
+        "name": title.name,
         "state": f"Playing on {title.console_name}",
         "start": start_timestamp,
         "large_image": title.get_cover_url(),
-        "large_text": title.name,
-        "small_image": "logo",
-        "small_text": "riitag.t0g3pii.de",
-        "buttons": [
-            {
-                "label": "View RiiTag",
-                "url": f"https://riitag.t0g3pii.de/user/{riitag_info.id}",
-            }
-        ],
+        "large_text": title.game_id,
     }
 
 

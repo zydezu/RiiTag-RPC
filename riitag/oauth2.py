@@ -168,12 +168,12 @@ class OAuth2Client:
 
         return f"{AUTHORIZE_ENDPOINT}?{query_str}"
 
-    def wait_for_code(self):
+    def wait_for_code(self, timeout=None):
         if not self._http_server:
             raise RuntimeError("Server not yet started.")
 
-        self._http_server.code_event.wait()
-        return self._http_server.code
+        received = self._http_server.code_event.wait(timeout=timeout)
+        return self._http_server.code if received else None
 
     def get_token(self, code):
         payload = {
