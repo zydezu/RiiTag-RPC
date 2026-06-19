@@ -17,7 +17,7 @@ from riitag.presence import format_presence
 from riitag.user import RiitagInfo, RiitagTitleResolver
 
 GAMES = [
-    {"game_id": "AMKE01", "console": "wiiu"},  # Mario Kart 8
+    # {"game_id": "AMKE01", "console": "wiiu"},  # Mario Kart 8
     {"game_id": "RMGE01", "console": "wii"},  # Super Mario Galaxy
 ]
 WAIT = 15
