@@ -1,8 +1,11 @@
 # RiiTag-RPC
 
+RiiTag-RPC allows you to show your Discord friends what you're playing on your Wii or Wii U by connecting to your [RiiTag](https://riitag.t0g3pii.de/) account.
 - This repository is a fork of [https://github.com/t0g3pii/RiiTag-RPC](RiiTag-RPC) that improves peformance and fixes some bugs
 
-RiiTag-RPC allows you to show your Discord friends what you're playing on your Wii or Wii U by connecting to your [RiiTag](https://riitag.t0g3pii.de/) account.
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/boysaremoe) [![pypresence](https://img.shields.io/badge/using-pypresence-00bb88.svg?style=for-the-badge&logo=discord&logoWidth=20)](https://github.com/qwertyquerty/pypresence)
+
+## Display Examples
 
 <img src="https://github.com/zydezu/RiiTag-RPC/blob/main/img/activity.png?raw=true">
 <img src="https://github.com/zydezu/RiiTag-RPC/blob/main/img/activitydetailed?raw=true">
