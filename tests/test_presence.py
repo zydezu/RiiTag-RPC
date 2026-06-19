@@ -1,5 +1,5 @@
 """
-Manual presence test - simulates playing a Wii game (Super Mario Galaxy).
+Manual presence test - simulates playing a Wii or Wii U game.
 """
 
 import sys
@@ -16,9 +16,28 @@ from pypresence.presence import Presence
 from riitag.presence import format_presence
 from riitag.user import RiitagInfo, RiitagTitleResolver
 
-GAME_ID = "RMGE01"
-CONSOLE = "wii"
+GAMES = [
+    {"game_id": "AMKE01", "console": "wiiu"},  # Mario Kart 8
+    {"game_id": "RMGE01", "console": "wii"},  # Super Mario Galaxy
+]
 WAIT = 15
+
+
+def make_riitag_info(game_id, console):
+    return RiitagInfo(
+        **{
+            "user": {"name": "TestUser", "id": "000000000000000000"},
+            "game_data": {
+                "last_played": {
+                    "game_id": game_id,
+                    "console": console,
+                    "region": "US",
+                    "time": int(time()),
+                },
+                "games": [f"{console}-{game_id}"],
+            },
+        }
+    )
 
 
 def main():
@@ -38,45 +57,38 @@ def main():
         return
     print("Connected.")
 
-    riitag_info = RiitagInfo(
-        **{
-            "user": {"name": "TestUser", "id": "000000000000000000"},
-            "game_data": {
-                "last_played": {
-                    "game_id": GAME_ID,
-                    "console": CONSOLE,
-                    "region": "US",
-                    "time": int(time()),
-                },
-                "games": [f"{CONSOLE}-{GAME_ID}"],
-            },
-        }
-    )
-
     resolver = RiitagTitleResolver()
     print("Fetching game titles from GameTDB...")
     resolver.update()
 
-    options = format_presence(riitag_info, resolver)
-
-    print(f"\nSetting presence: {options.get('name', GAME_ID)}")
-    print(f"  state:       {options.get('state')}")
-    print(f"  large_image: {options.get('large_image')}")
-    print(f"\nUpdating every {WAIT}s — press Ctrl+C to stop.\n")
+    print(
+        f"\nCycling through {len(GAMES)} game(s) every {WAIT}s — press Ctrl+C to stop.\n"
+    )
 
     try:
         while True:
-            try:
-                rpc.update(**options)
-                print("Presence updated.")
-            except (InvalidPipe, InvalidID):
-                print("Lost Discord connection, reconnecting...")
-                rpc.close()
-                rpc = Presence(client_id)
-                rpc.connect()
-            except ServerError as e:
-                print(f"Discord rejected update: {e}")
-            sleep(WAIT)
+            for game in GAMES:
+                riitag_info = make_riitag_info(game["game_id"], game["console"])
+                options = format_presence(riitag_info, resolver)
+
+                print(
+                    f"Setting presence: {options.get('name', game['game_id'])} ({game['console']})"
+                )
+                print(f"  state:       {options.get('state')}")
+                print(f"  large_image: {options.get('large_image')}")
+
+                try:
+                    rpc.update(**options)
+                    print("Presence updated.")
+                except (InvalidPipe, InvalidID):
+                    print("Lost Discord connection, reconnecting...")
+                    rpc.close()
+                    rpc = Presence(client_id)
+                    rpc.connect()
+                except ServerError as e:
+                    print(f"Discord rejected update: {e}")
+
+                sleep(WAIT)
     except KeyboardInterrupt:
         print("\nStopping.")
     finally:

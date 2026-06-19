@@ -25,6 +25,12 @@ def format_presence(
         "start": start_timestamp,
         "large_image": title.get_cover_url(),
         "large_text": title.game_id,
+        "buttons": [
+            {
+                "label": "View Profile",
+                "url": f"https://riitag.t0g3pii.de/user/{riitag_info.id}",
+            }
+        ],
     }
 
 

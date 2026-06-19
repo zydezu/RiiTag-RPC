@@ -7,8 +7,8 @@ RiiTag-RPC allows you to show your Discord friends what you're playing on your W
 
 ## Display Examples
 
-<img src="https://github.com/zydezu/RiiTag-RPC/blob/main/img/activity.png?raw=true">
-<img src="https://github.com/zydezu/RiiTag-RPC/blob/main/img/activitydetailed?raw=true">
+<img src="https://github.com/zydezu/RiiTag-RPC/blob/master/img/activity.png?raw=true">
+<img src="https://github.com/zydezu/RiiTag-RPC/blob/master/img/activitydetailed?raw=true">
 
 ## Instructions
 1. Grab the latest release from [here](https://github.com/zydezu/RiiTag-RPC/releases/latest).
