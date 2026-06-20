@@ -24,7 +24,7 @@ from prompt_toolkit.widgets import Box, Button, Frame, Label
 from sentry_sdk import configure_scope
 
 from riitag import oauth2, presence, user, watcher
-from riitag.util import get_cache, get_cache_dir, resource_path
+from riitag.util import get_config, get_config_dir, resource_path
 
 if TYPE_CHECKING:
     from start import RiiTagApplication
@@ -218,12 +218,12 @@ class SplashScreen(Menu):
 
     @property
     def is_token_cached(self):
-        return os.path.isfile(get_cache("token.json"))
+        return os.path.isfile(get_config("token.json"))
 
     def _refresh_token(self, token):
         try:
             token.refresh()
-            token.save(get_cache("token.json"))
+            token.save(get_config("token.json"))
 
             self.app.token = token
             self.app.user = token.get_user()
@@ -279,7 +279,7 @@ class SplashScreen(Menu):
         if self.is_token_cached:
             self.status_str = "Loading cached token..."
             self.update()
-            with open(get_cache("token.json"), "r") as file:
+            with open(get_config("token.json"), "r") as file:
                 token_data = json.load(file)
             try:
                 token = oauth2.OAuth2Token(self.app.oauth_client, **token_data)
@@ -320,7 +320,7 @@ class SetupMenu(Menu):
 
         self.state = "setup_start"
 
-        if not os.path.isfile(get_cache("token.json")):  # new user
+        if not os.path.isfile(get_config("token.json")):  # new user
             self.setup_start_layout = Window(
                 FormattedTextControl(
                     HTML(
@@ -463,7 +463,7 @@ class SetupMenu(Menu):
         self.update()
 
         token = self.app.oauth_client.get_token(code)
-        token.save(get_cache("token.json"))
+        token.save(get_config("token.json"))
         self.app.token = token
 
         self.app.user = token.get_user()
@@ -721,7 +721,7 @@ class MainMenu(Menu):
 
     def _logout_callback(self, confirm):
         if confirm:
-            os.remove(get_cache("token.json"))
+            os.remove(get_config("token.json"))
             self.app.exit()
 
     def _logout(self):
@@ -759,13 +759,13 @@ class MainMenu(Menu):
                 self.settings_pres_timeout_button.value
             )
 
-        self.app.preferences.save(get_cache("prefs.json"))
+        self.app.preferences.save(get_config("prefs.json"))
 
         return is_modified
 
     def _reset_preferences(self):
         self.app.preferences.reset()
-        self.app.preferences.save(get_cache("prefs.json"))
+        self.app.preferences.save(get_config("prefs.json"))
 
         self.settings_pres_timeout_button.value = self.app.preferences.presence_timeout
         self.settings_pres_timeout_button.update()
@@ -794,7 +794,8 @@ class MainMenu(Menu):
 
         if not riitag.outdated:
             options = presence.format_presence(
-                self.riitag_info, self.app.title_resolver
+                self.riitag_info, self.app.title_resolver,
+                short_console_name=self.app.preferences.short_console_name,
             )
             self.app.rpc_handler.set_presence(**options)
         else:
@@ -860,12 +861,12 @@ class DebugMenu(Menu):
         if hasattr(self.app, "_connect_attempt"):
             self.rpc_connection_attempts = self.app._connect_attempt
 
-        cache_dir = get_cache_dir()
+        cache_dir = get_config_dir()
         self.cache_info = {
             "directory": cache_dir,
-            "token_exists": os.path.exists(get_cache("token.json")),
-            "prefs_exists": os.path.exists(get_cache("prefs.json")),
-            "uid_exists": os.path.exists(get_cache("_uid")),
+            "token_exists": os.path.exists(get_config("token.json")),
+            "prefs_exists": os.path.exists(get_config("prefs.json")),
+            "uid_exists": os.path.exists(get_config("_uid")),
         }
 
         if hasattr(self.app, "riitag_watcher") and self.app.riitag_watcher:

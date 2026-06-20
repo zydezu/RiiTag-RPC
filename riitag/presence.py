@@ -6,7 +6,7 @@ from .user import RiitagInfo, RiitagTitleResolver
 
 
 def format_presence(
-    riitag_info: RiitagInfo, resolver: RiitagTitleResolver | None = None
+    riitag_info: RiitagInfo, resolver: RiitagTitleResolver | None = None, short_console_name: bool = True
 ):
     last_played = riitag_info.last_played
     if not last_played:
@@ -21,7 +21,7 @@ def format_presence(
 
     return {
         "name": title.name,
-        "state": f"Playing on {title.console_name}",
+        "state": f"Playing on {title.console_name(short=short_console_name)}",
         "start": start_timestamp,
         "large_image": title.get_cover_url(),
         "large_text": title.game_id,

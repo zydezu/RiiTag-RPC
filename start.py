@@ -21,7 +21,7 @@ from prompt_toolkit.widgets import Button, Frame
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
-from riitag.util import get_cache, is_bundled, resource_path
+from riitag.util import get_config, migrate_config, is_bundled, resource_path
 
 nest_asyncio.apply()
 
@@ -71,10 +71,10 @@ sys.excepthook = on_error
 threading.excepthook = on_thread_error
 
 try:
-    # prepare cache dir early so we can spot errors sooner
-    get_cache("")
+    get_config("")
+    migrate_config()
 except OSError:
-    print("ERROR: Could not create cache directory.")
+    print("ERROR: Could not create config directory.")
     print("Please check file permissions and try again.")
     print()
     print("Press enter to exit.")
@@ -84,12 +84,12 @@ except OSError:
 
 def get_user_id():
     try:
-        with open(get_cache("_uid"), "r") as f:
+        with open(get_config("_uid"), "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         uid = str(uuid.uuid4())
         try:
-            with open(get_cache("_uid"), "w+") as f:
+            with open(get_config("_uid"), "w+") as f:
                 f.write(uid)
         except:
             return None
@@ -123,7 +123,7 @@ class RiiTagApplication(Application):
         self._current_menu: menus.Menu | None = None
         self._float_message_layout = None
 
-        self.preferences = preferences.Preferences.load(get_cache("prefs.json"))
+        self.preferences = preferences.Preferences.load(get_config("prefs.json"))
         self.oauth_client = oauth2.OAuth2Client(CONFIG.get("oauth2"))
         self.rpc_handler = presence.RPCHandler(CONFIG.get("rpc", {}).get("client_id"))
         self.title_resolver = user.RiitagTitleResolver()

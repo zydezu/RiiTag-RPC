@@ -4,7 +4,7 @@ import os
 
 
 class Preferences:
-    DEFAULTS = {"check_interval": 10, "presence_timeout": 30}
+    DEFAULTS = {"check_interval": 10, "presence_timeout": 30, "short_console_name": True}
 
     def __init__(self, **values):
         self._values = values
@@ -47,3 +47,11 @@ class Preferences:
     @presence_timeout.setter
     def presence_timeout(self, value):
         self._values["presence_timeout"] = value
+
+    @property
+    def short_console_name(self):
+        return self.get("short_console_name")
+
+    @short_console_name.setter
+    def short_console_name(self, value):
+        self._values["short_console_name"] = value

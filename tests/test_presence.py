@@ -13,8 +13,10 @@ from time import sleep, time
 from pypresence import DiscordNotFound, InvalidID, InvalidPipe, ServerError
 from pypresence.presence import Presence
 
+from riitag.preferences import Preferences
 from riitag.presence import format_presence
 from riitag.user import RiitagInfo, RiitagTitleResolver
+from riitag.util import get_config, migrate_config
 
 GAMES = [
     # {"game_id": "AMKE01", "console": "wiiu"},  # Mario Kart 8
@@ -41,6 +43,9 @@ def make_riitag_info(game_id, console):
 
 
 def main():
+    migrate_config()
+
+    prefs = Preferences.load(get_config("prefs.json"))
     config_path = Path(__file__).resolve().parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
@@ -69,7 +74,7 @@ def main():
         while True:
             for game in GAMES:
                 riitag_info = make_riitag_info(game["game_id"], game["console"])
-                options = format_presence(riitag_info, resolver)
+                options = format_presence(riitag_info, resolver, short_console_name=prefs.short_console_name)
 
                 print(
                     f"Setting presence: {options.get('name', game['game_id'])} ({game['console']})"

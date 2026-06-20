@@ -115,6 +115,10 @@ class RiitagTitle:
         "wii": "Wii",
         "wiiu": "Wii U",
     }
+    CONSOLE_NAMES_LONG = {
+        "wii": "Nintendo Wii",
+        "wiiu": "Nintendo Wii U",
+    }
     REGION = ("EN", "US", "JA")
     FILE_TYPES = ("png", "jpg")
     _cover_url_cache: dict[str, str] = {}
@@ -129,10 +133,10 @@ class RiitagTitle:
     def name(self):
         return self._resolver.get_game_name(self.console, self.game_id)
 
-    @property
-    def console_name(self):
+    def console_name(self, short=True):
         console = self.console.lower()
-        return self.CONSOLE_NAMES.get(console, console)
+        names = self.CONSOLE_NAMES if short else self.CONSOLE_NAMES_LONG
+        return names.get(console, console)
 
     def get_cover_url(self):
         cache_key = f"{self.console}:{self.game_id}"
