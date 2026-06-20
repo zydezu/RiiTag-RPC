@@ -252,10 +252,14 @@ jobs:
         run: |
           echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
           echo "DATETIME=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
-      - name: Create tag
+      - name: Create release and upload artifacts
         if: steps.check.outputs.artifact_exists == 'true'
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
-          git push origin ${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}
+          TAG="${{ env.REPOSITORY_NAME }}-${{ env.DATETIME }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" releases/* --title "$TAG" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
