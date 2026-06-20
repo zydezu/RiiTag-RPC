@@ -213,11 +213,11 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.changelog }}" ]; then
             gh release create "${{ github.event.inputs.tag }}" releases/* \
-              --title "${{ github.event.inputs.tag }}" \
+              --title "RiiTag-RPC ${{ github.event.inputs.tag }}" \
               --notes "${{ github.event.inputs.changelog }}"
           else
             gh release create "${{ github.event.inputs.tag }}" releases/* \
-              --title "${{ github.event.inputs.tag }}" \
+              --title "RiiTag-RPC ${{ github.event.inputs.tag }}" \
               --generate-notes
           fi
         env:
