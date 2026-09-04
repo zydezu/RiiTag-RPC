@@ -16,10 +16,3 @@ dependencies = [
     "requests~=2.31.0",
     "sentry-sdk~=1.28.1",
 ]
-
-[project.scripts]
-riitag-rpc = "riitag_rpc:main"
-
-[build-system]
-requires = ["uv_build>=0.12.9,<0.13.0"]
-build-backend = "uv_build"
