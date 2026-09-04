@@ -6,18 +6,20 @@ on:
       tag:
         description: "Release tag (e.g. v1.4.9)"
         required: true
-      changelog:
-        description: "Release notes / changelog"
-        required: false
+
       release_type:
         description: "Release type"
         required: true
+        default: "release"
         type: choice
-        default: draft
         options:
-          - draft
-          - prerelease
           - release
+          - prerelease
+          - draft
+
+      changelog:
+        description: "Release notes / changelog"
+        required: false
 
 jobs:
   linux_x64:
@@ -25,9 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: astral-sh/setup-uv@v8.2.0
+
       - name: Build Linux executable
         run: bash tools/build_executable.sh
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7
         with:
@@ -39,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - name: Build on ARM64 using arm-runner
         uses: pguyot/arm-runner-action@v2
         with:
@@ -54,11 +60,13 @@ jobs:
             python -m pip install --upgrade pip
             pip install -r requirements.txt
             pip install pyinstaller
+
             pyinstaller --onefile \
               --name "RiiTag-RPC_Linux_ARM64" \
               --add-data "banner.txt:." \
               --add-data "config.json:." \
               start.py
+
       - name: Upload ARM64 artifact
         uses: actions/upload-artifact@v7
         with:
@@ -70,29 +78,39 @@ jobs:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
       - name: Cache Python dependencies
         uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: macos-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: macos-pip-
+
       - name: Install dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+
       - name: Install PyInstaller
         run: |
           source .venv/bin/activate
           pip install pyinstaller
+
       - name: Build macOS executable
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --name "RiiTag-RPC_MacOS_x64" --add-data "banner.txt:." --add-data "config.json:." start.py
+          pyinstaller --onefile \
+            --name "RiiTag-RPC_MacOS_x64" \
+            --add-data "banner.txt:." \
+            --add-data "config.json:." \
+            start.py
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
         with:
@@ -104,29 +122,39 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
       - name: Cache Python dependencies
         uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: macos-arm64-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: macos-arm64-pip-
+
       - name: Install dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+
       - name: Install PyInstaller
         run: |
           source .venv/bin/activate
           pip install pyinstaller
+
       - name: Build macOS ARM64 executable
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --name "RiiTag-RPC_MacOS_ARM64" --add-data "banner.txt:." --add-data "config.json:." start.py
+          pyinstaller --onefile \
+            --name "RiiTag-RPC_MacOS_ARM64" \
+            --add-data "banner.txt:." \
+            --add-data "config.json:." \
+            start.py
+
       - name: Upload macOS ARM64 artifact
         uses: actions/upload-artifact@v7
         with:
@@ -138,27 +166,37 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
       - name: Setup venv
         run: python -m venv .venv
+
       - name: Install dependencies
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+
       - name: Install PyInstaller
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
           pip install pyinstaller
+
       - name: Build Windows executable
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
-          pyinstaller --onefile --name "RiiTag-RPC_Windows_x64" --add-data "banner.txt;." --add-data "config.json;." start.py
+          pyinstaller --onefile \
+            --name "RiiTag-RPC_Windows_x64" \
+            --add-data "banner.txt;." \
+            --add-data "config.json;." \
+            start.py
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7
         with:
@@ -170,27 +208,37 @@ jobs:
     runs-on: windows-11-arm
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+
       - name: Setup venv
         run: python -m venv .venv
+
       - name: Install dependencies
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+
       - name: Install PyInstaller
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
           pip install pyinstaller
+
       - name: Build Windows ARM64 executable
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
-          pyinstaller --onefile --name "RiiTag-RPC_Windows_ARM64" --add-data "banner.txt;." --add-data "config.json;." start.py
+          pyinstaller --onefile \
+            --name "RiiTag-RPC_Windows_ARM64" \
+            --add-data "banner.txt;." \
+            --add-data "config.json;." \
+            start.py
+
       - name: Upload Windows ARM64 artifact
         uses: actions/upload-artifact@v7
         with:
@@ -200,8 +248,10 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
+
     needs:
       - linux_x64
       - linux_arm64
@@ -209,25 +259,56 @@ jobs:
       - macos_arm64
       - windows_x64
       - windows_arm64
+
     steps:
       - uses: actions/checkout@v6
+
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
           path: releases
           merge-multiple: true
+
       - name: List artifacts
         run: ls -la releases/
+
       - name: Create GitHub release
+        shell: bash
         run: |
-          if [ -n "${{ github.event.inputs.changelog }}" ]; then
-            gh release create "${{ github.event.inputs.tag }}" releases/* \
-              --title "RiiTag-RPC ${{ github.event.inputs.tag }}" \
-              --notes "${{ github.event.inputs.changelog }}"
+          TAG="${{ github.event.inputs.tag }}"
+          CHANGELOG="${{ github.event.inputs.changelog }}"
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+
+          ARGS=(
+            "$TAG"
+            releases/*
+            --title "RiiTag-RPC $TAG"
+          )
+
+          if [ -n "$CHANGELOG" ]; then
+            ARGS+=(--notes "$CHANGELOG")
           else
-            gh release create "${{ github.event.inputs.tag }}" releases/* \
-              --title "RiiTag-RPC ${{ github.event.inputs.tag }}" \
-              --generate-notes
+            ARGS+=(--generate-notes)
           fi
+
+          case "$RELEASE_TYPE" in
+            prerelease)
+              ARGS+=(--prerelease)
+              ;;
+
+            draft)
+              ARGS+=(--draft)
+              ;;
+
+            release)
+              ;;
+
+            *)
+              echo "Invalid release type: $RELEASE_TYPE"
+              exit 1
+              ;;
+          esac
+
+          gh release create "${ARGS[@]}"
         env:
           GH_TOKEN: ${{ github.token }}
