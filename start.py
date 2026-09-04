@@ -21,9 +21,15 @@ from prompt_toolkit.widgets import Button, Frame
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
-from riitag.util import get_config, migrate_config, is_bundled, resource_path
+from riitag.util import get_config, is_bundled, migrate_config, resource_path
 
 nest_asyncio.apply()
+
+# stupid patch because of python 3.14
+import asyncio
+
+if hasattr(asyncio.tasks, "_py_current_task"):
+    asyncio.tasks.current_task = asyncio.tasks._py_current_task
 
 
 def on_error(exc_type, exc_value, exc_traceback):
@@ -111,6 +117,7 @@ sentry_sdk.init(
     "https://0206915cd7604929997a753583292296@o107347.ingest.sentry.io/5450405",
     traces_sample_rate=1.0,
     release=f"riitag-rpc@{VERSION}",
+    include_local_variables=False,
 )
 with sentry_sdk.configure_scope() as scope:
     # noinspection PyDunderSlots,PyUnresolvedReferences
