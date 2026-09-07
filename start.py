@@ -4,41 +4,21 @@ import threading
 import traceback
 import uuid
 
-import nest_asyncio
 import sentry_sdk
-from prompt_toolkit.application import Application, DummyApplication, get_app
-from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.layout import (
-    DynamicContainer,
-    Float,
-    FloatContainer,
-    FormattedTextControl,
-    Layout,
-)
-from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
-from prompt_toolkit.shortcuts import set_title
-from prompt_toolkit.widgets import Button, Frame
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
+from riitag.tui import C, clear, read_key
 from riitag.util import get_config, is_bundled, migrate_config, resource_path
 
-nest_asyncio.apply()
-
-# stupid patch because of python 3.14
-import asyncio
-
-if hasattr(asyncio.tasks, "_py_current_task"):
-    asyncio.tasks.current_task = asyncio.tasks._py_current_task
+_APP_INSTANCE: "RiiTagApp | None" = None
 
 
 def on_error(exc_type, exc_value, exc_traceback):
-    app: RiiTagApplication = get_app()
-    if not isinstance(app, DummyApplication):
+    if _APP_INSTANCE is not None and _APP_INSTANCE.is_running:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        app.invalidate()
 
-        app.show_message(
+        _APP_INSTANCE.show_message(
             "Whoops!",
             "An unexpected error has occured.\n"
             "The exception will be reported so the developers can look into it.\n\n"
@@ -47,6 +27,7 @@ def on_error(exc_type, exc_value, exc_traceback):
             + "\n\n"
             + "Reported exception:\n"
             + f"{exc_type.__name__} - {exc_value or '<no except value>'}",
+            ok_only=True,
         )
         return
 
@@ -97,7 +78,7 @@ def get_user_id():
         try:
             with open(get_config("_uid"), "w+") as f:
                 f.write(uid)
-        except:
+        except Exception:
             return None
         return uid
 
@@ -125,60 +106,38 @@ with sentry_sdk.configure_scope() as scope:
     scope.set_tag("bundled", is_bundled())
 
 
-class RiiTagApplication(Application):
-    def __init__(self, *args, **kwargs):
+class RiiTagApp:
+    def __init__(self):
+        global _APP_INSTANCE
+        _APP_INSTANCE = self
+
         self._current_menu: menus.Menu | None = None
-        self._float_message_layout = None
+        self._pending_message: dict | None = None
+        self._lock = threading.Lock()
+        self._dirty = True
+        self._running = False
 
         self.preferences = preferences.Preferences.load(get_config("prefs.json"))
         self.oauth_client = oauth2.OAuth2Client(CONFIG.get("oauth2"))
         self.rpc_handler = presence.RPCHandler(CONFIG.get("rpc", {}).get("client_id"))
         self.title_resolver = user.RiitagTitleResolver()
 
-        self.set_menu(menus.SplashScreen)
-        set_title(self.version_string)
-
-        super().__init__(
-            *args,
-            **kwargs,
-            layout=Layout(DynamicContainer(self._get_layout)),
-            full_screen=True,
-        )
-
         self.token: oauth2.OAuth2Token | None = None
         self.user: user.User | None = None
 
         self.riitag_watcher: watcher.RiitagWatcher | None = None
 
+        self.set_menu(menus.SplashScreen)
+
         self.oauth_client.start_server(CONFIG.get("port", 4000))
 
-    def _get_layout(self):
-        menu_layout = self._current_menu.get_layout()
-        if self._current_menu.is_framed:
-            menu_layout = Frame(menu_layout, title=self.header_string)
-
-        if self._float_message_layout:
-            menu_layout = FloatContainer(
-                content=menu_layout, floats=[Float(content=self._float_message_layout)]
-            )
-
-        return menu_layout
-
     ######################
-    # Overridden Methods #
+    # State / Lifecycle  #
     ######################
 
     @property
-    def key_bindings(self):
-        return self._current_menu.get_all_kb()
-
-    @key_bindings.setter
-    def key_bindings(self, value):
-        return
-
-    ##################
-    # Custom Methods #
-    ##################
+    def is_running(self):
+        return self._running
 
     @property
     def version_string(self):
@@ -196,51 +155,97 @@ class RiiTagApplication(Application):
             self._current_menu.on_exit()
 
         self._current_menu = menu(self)
-        if hasattr(self, "_is_running"):
-            self.invalidate()
+        self.invalidate()
         self._current_menu.on_start()
 
+    def exit(self):
+        self._running = False
+
+    ####################
+    # Rendering / Input #
+    ####################
+
+    def invalidate(self):
+        self._dirty = True
+
+    def redraw(self):
+        clear()
+        if self._current_menu.is_framed:
+            print(f"  {C.BOLD}{C.CYAN}RiiTag-RPC{C.RESET}  {C.GRAY}— {self._current_menu.name}{C.RESET}")
+            print(f"  {C.GRAY}{'─' * 56}{C.RESET}")
+        self._current_menu.render()
+        if self._pending_message:
+            self._render_message()
+
+    def _render_message(self):
+        m = self._pending_message
+        print(f"\n  {C.BOLD}{C.MAGENTA}{m['title']}{C.RESET}")
+        for line in m["message"].split("\n"):
+            print(f"  {line}")
+        print()
+        if m["ok_only"]:
+            print(f"  [{C.YELLOW}enter{C.RESET}] OK")
+        else:
+            print(f"  [{C.YELLOW}y{C.RESET}]es   [{C.YELLOW}n{C.RESET}]o")
+
     def show_message(self, title, message, callback=None, ok_only=False):
-        ok_button = Button("OK", handler=lambda: response_received(True))
-
-        def response_received(is_ok):
-            if callback:
-                callback(is_ok)
-
-            self._float_message_layout = None
-            self.layout.focus_next()
-            self.invalidate()
-
-        buttons = (
-            [ok_button]
-            if ok_only
-            else [
-                Button("Cancel", handler=lambda: response_received(False)),
-                ok_button,
-            ]
-        )
-
-        message_frame = Frame(
-            HSplit(
-                [
-                    Window(
-                        FormattedTextControl(HTML(message + "\n\n")),
-                        align=WindowAlign.CENTER,
-                    ),
-                    VSplit(buttons, padding=3, align=WindowAlign.CENTER),
-                ],
-                padding=1,
-            ),
-            title=title,
-        )
-
-        self._float_message_layout = message_frame
-        self.layout.focus(ok_button)
+        with self._lock:
+            self._pending_message = {
+                "title": title,
+                "message": message,
+                "callback": callback,
+                "ok_only": ok_only,
+            }
         self.invalidate()
+
+    def _handle_message_key(self, key):
+        m = self._pending_message
+        if m["ok_only"]:
+            if key in ("enter", " "):
+                self._resolve_message(True)
+        else:
+            if key == "y":
+                self._resolve_message(True)
+            elif key in ("n", "esc"):
+                self._resolve_message(False)
+
+    def _resolve_message(self, is_ok):
+        with self._lock:
+            m = self._pending_message
+            self._pending_message = None
+
+        if m and m["callback"]:
+            m["callback"](is_ok)
+
+        self.invalidate()
+
+    def run(self):
+        self._running = True
+        try:
+            while self._running:
+                if self._dirty:
+                    self._dirty = False
+                    self.redraw()
+
+                try:
+                    key = read_key(timeout=0.2)
+                except KeyboardInterrupt:
+                    self._current_menu.quit_app()
+                    break
+
+                if key is None:
+                    continue
+
+                if self._pending_message:
+                    self._handle_message_key(key)
+                else:
+                    self._current_menu.handle_key(key)
+        finally:
+            clear()
 
 
 def main():
-    application = RiiTagApplication()
+    application = RiiTagApp()
     application.run()
 
 

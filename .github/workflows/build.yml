@@ -53,25 +53,42 @@ jobs:
           name: RiiTag-RPC_Linux_ARM64
           path: dist/RiiTag-RPC_Linux_ARM64
 
-  macos_x64:
-    name: Build macOS x64
-    runs-on: macos-15-intel
+  macos_universal2:
+    name: Build macOS Universal2
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      - name: Install universal2 Python from python.org
+        run: |
+          set -euo pipefail
+          for PY_VER in 3.13.7 3.13.6 3.13.5 3.13.1 3.13.0 3.12.8; do
+            URL="https://www.python.org/ftp/python/${PY_VER}/python-${PY_VER}-macos11.pkg"
+            echo "Trying ${URL}..."
+            if curl -fsSL -o python.pkg "$URL"; then
+              echo "PY_VER=${PY_VER}" >> "$GITHUB_ENV"
+              echo "PY_MAJOR_MINOR=${PY_VER%.*}" >> "$GITHUB_ENV"
+              break
+            fi
+          done
+          test -f python.pkg
+          sudo installer -pkg python.pkg -target /
+      - name: Verify the interpreter is universal2
+        run: |
+          PYBIN="/Library/Frameworks/Python.framework/Versions/${PY_MAJOR_MINOR}/bin/python3"
+          echo "$PYBIN"
+          lipo -archs "/Library/Frameworks/Python.framework/Versions/${PY_MAJOR_MINOR}/Python"
+          echo "PYBIN=${PYBIN}" >> "$GITHUB_ENV"
       - name: Cache Python dependencies
         uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pip
-          key: macos-pip-${{ hashFiles('requirements.txt') }}
+          key: macos-universal2-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            macos-pip-
+            macos-universal2-pip-
       - name: Install dependencies
         run: |
-          python -m venv .venv
+          "$PYBIN" -m venv .venv
           source .venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
@@ -79,15 +96,19 @@ jobs:
         run: |
           source .venv/bin/activate
           pip install pyinstaller
-      - name: Build macOS executable
+      - name: Build macOS universal2 executable
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --name "RiiTag-RPC_MacOS_x64" --add-data "banner.txt:." --add-data "config.json:." start.py
+          pyinstaller --onefile --target-architecture universal2 \
+            --name "RiiTag-RPC_MacOS_Universal2" \
+            --add-data "banner.txt:." --add-data "config.json:." start.py
+      - name: Verify the built binary is universal2
+        run: lipo -archs dist/RiiTag-RPC_MacOS_Universal2
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: RiiTag-RPC_MacOS_x64
-          path: dist/RiiTag-RPC_MacOS_x64
+          name: RiiTag-RPC_MacOS_Universal2
+          path: dist/RiiTag-RPC_MacOS_Universal2
 
   windows_x64:
     name: Build Windows x64
@@ -121,42 +142,6 @@ jobs:
         with:
           name: RiiTag-RPC_Windows_x64
           path: dist/RiiTag-RPC_Windows_x64.exe
-
-  macos_arm64:
-    name: Build macOS ARM64
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - name: Cache Python dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/pip
-          key: macos-arm64-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            macos-arm64-pip-
-      - name: Install dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
-      - name: Install PyInstaller
-        run: |
-          source .venv/bin/activate
-          pip install pyinstaller
-      - name: Build macOS ARM64 executable
-        run: |
-          source .venv/bin/activate
-          pyinstaller --onefile --name "RiiTag-RPC_MacOS_ARM64" --add-data "banner.txt:." --add-data "config.json:." start.py
-      - name: Upload macOS ARM64 artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: RiiTag-RPC_MacOS_ARM64
-          path: dist/RiiTag-RPC_MacOS_ARM64
 
   windows_arm64:
     name: Build Windows ARM64
@@ -200,8 +185,7 @@ jobs:
     needs:
       - linux_x64
       - linux_arm64
-      - macos_x64
-      - macos_arm64
+      - macos_universal2
       - windows_x64
       - windows_arm64
     steps:
@@ -221,13 +205,7 @@ jobs:
       - name: Download macOS artifact
         uses: actions/download-artifact@v8
         with:
-          name: RiiTag-RPC_MacOS_x64
-          path: releases
-        continue-on-error: true
-      - name: Download macOS ARM64 artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: RiiTag-RPC_MacOS_ARM64
+          name: RiiTag-RPC_MacOS_Universal2
           path: releases
         continue-on-error: true
       - name: Download Windows artifact
