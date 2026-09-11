@@ -168,11 +168,7 @@ jobs:
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
-          pyinstaller --onefile \
-            --name "RiiTag-RPC_Windows_x64" \
-            --add-data "banner.txt;." \
-            --add-data "config.json;." \
-            start.py
+          pyinstaller --onefile --name "RiiTag-RPC_Windows_x64" --add-data "banner.txt;." --add-data "config.json;." start.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7
@@ -210,11 +206,7 @@ jobs:
         shell: pwsh
         run: |
           .\.venv\Scripts\activate.ps1
-          pyinstaller --onefile \
-            --name "RiiTag-RPC_Windows_ARM64" \
-            --add-data "banner.txt;." \
-            --add-data "config.json;." \
-            start.py
+          pyinstaller --onefile --name "RiiTag-RPC_Windows_ARM64" --add-data "banner.txt;." --add-data "config.json;." start.py
 
       - name: Upload Windows ARM64 artifact
         uses: actions/upload-artifact@v7
