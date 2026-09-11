@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 import threading
@@ -8,6 +9,7 @@ import sentry_sdk
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
+from riitag.headless import HeadlessApp
 from riitag.tui import C, clear, enter_fullscreen, exit_fullscreen, key_opt, read_key
 from riitag.util import get_config, is_bundled, migrate_config, resource_path
 
@@ -45,8 +47,9 @@ def on_error(exc_type, exc_value, exc_traceback):
     print("** Original exception was: **")
     traceback.print_exception(exc_value)
     print()
-    print("** Press Enter to exit **")
-    input()
+    if sys.stdin.isatty():
+        print("** Press Enter to exit **")
+        input()
     sys.exit(1)
 
 
@@ -247,7 +250,24 @@ class RiiTagApp:
             exit_fullscreen()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="RiiTag-RPC")
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="run without a terminal UI, for unattended use (e.g. under "
+        "systemd). Needs an existing cached login - log in interactively "
+        "once first.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
+    if args.headless:
+        sys.exit(HeadlessApp(CONFIG).run())
+
     application = RiiTagApp()
     application.run()
 
