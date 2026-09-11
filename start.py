@@ -8,7 +8,7 @@ import sentry_sdk
 
 import menus
 from riitag import oauth2, preferences, presence, user, watcher
-from riitag.tui import C, clear, read_key
+from riitag.tui import C, clear, enter_fullscreen, exit_fullscreen, key_opt, read_key
 from riitag.util import get_config, is_bundled, migrate_config, resource_path
 
 _APP_INSTANCE: "RiiTagApp | None" = None
@@ -173,20 +173,22 @@ class RiiTagApp:
         if self._current_menu.is_framed:
             print(f"  {C.BOLD}{C.CYAN}RiiTag-RPC{C.RESET}  {C.GRAY}— {self._current_menu.name}{C.RESET}")
             print(f"  {C.GRAY}{'─' * 56}{C.RESET}")
+            print()
         self._current_menu.render()
         if self._pending_message:
             self._render_message()
 
     def _render_message(self):
         m = self._pending_message
-        print(f"\n  {C.BOLD}{C.MAGENTA}{m['title']}{C.RESET}")
+        print()
+        print(f"  {C.BOLD}{C.YELLOW}{m['title']}{C.RESET}")
         for line in m["message"].split("\n"):
-            print(f"  {line}")
+            print(f"  {C.GRAY}{line}{C.RESET}" if line else "")
         print()
         if m["ok_only"]:
-            print(f"  [{C.YELLOW}enter{C.RESET}] OK")
+            print(f"  {key_opt('enter', ' OK')}")
         else:
-            print(f"  [{C.YELLOW}y{C.RESET}]es   [{C.YELLOW}n{C.RESET}]o")
+            print(f"  {key_opt('y', 'es')}   {key_opt('n', 'o')}")
 
     def show_message(self, title, message, callback=None, ok_only=False):
         with self._lock:
@@ -221,6 +223,7 @@ class RiiTagApp:
 
     def run(self):
         self._running = True
+        enter_fullscreen()
         try:
             while self._running:
                 if self._dirty:
@@ -241,7 +244,7 @@ class RiiTagApp:
                 else:
                     self._current_menu.handle_key(key)
         finally:
-            clear()
+            exit_fullscreen()
 
 
 def main():

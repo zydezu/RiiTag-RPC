@@ -11,22 +11,17 @@ import webbrowser
 from typing import TYPE_CHECKING
 
 import requests
-from rich import box
-from rich.console import Console
-from rich.table import Table
 from sentry_sdk import configure_scope
 
 from riitag import oauth2, presence, user, watcher
-from riitag.tui import C, key_opt, read_key
+from riitag.tui import C, err, hide_cursor, key_opt, ok, read_key, show_cursor, warn
 from riitag.util import get_config, get_config_dir, resource_path
 
 if TYPE_CHECKING:
     from start import RiiTagApp
 
-with open(resource_path("banner.txt"), "r+") as banner:
-    BANNER = banner.read()
-
-console = Console()
+with open(resource_path("banner.txt"), "r") as banner:
+    BANNER = banner.read().strip("\n")
 
 
 def _copy_to_clipboard(text: str) -> bool:
@@ -69,13 +64,16 @@ def _copy_to_clipboard(text: str) -> bool:
 
 def _prompt(msg: str) -> str:
     print(f"\n  {C.BOLD}{msg}{C.RESET} ", end="", flush=True)
-    return input()
+    show_cursor()
+    try:
+        return input()
+    finally:
+        hide_cursor()
 
 
-def _pause(msg: str, ok: bool = True) -> None:
-    symbol = f"{C.GREEN}✓" if ok else f"{C.RED}✗"
-    print(f"  {symbol}  {msg}{C.RESET}")
-    print(f"\n  {C.GRAY}Press any key to continue…{C.RESET}", end="", flush=True)
+def _pause(msg: str, is_ok: bool = True) -> None:
+    print(f"  {ok(msg) if is_ok else err(msg)}")
+    print(f"  {C.GRAY}Press any key to continue…{C.RESET}", end="", flush=True)
     read_key()
 
 
@@ -154,15 +152,14 @@ class SplashScreen(Menu):
         self.status_str = "Loading..."
 
     def render(self):
-        print()
         for line in BANNER.splitlines():
-            print(f"  {C.CYAN}{line}{C.RESET}")
+            print(f"  {C.BOLD}{C.CYAN}{line}{C.RESET}")
         print()
-        print(f"  {C.BOLD}{self.app.version_string}{C.RESET}")
-        print("  Created by Mike Almeloo")
-        print("  Forked and edited with ♥ by t0g3pii")
+        print(f"  {C.BOLD}{C.CYAN}{self.app.version_string}{C.RESET}")
+        print(f"  {C.GRAY}Created by Mike Almeloo{C.RESET}")
+        print(f"  {C.GRAY}Forked and edited with {C.RED}♥{C.GRAY} by t0g3pii{C.RESET}")
         print()
-        print(f"  {self.status_str}")
+        print(f"  {C.GRAY}{self.status_str}{C.RESET}")
 
     def on_start(self):
         super().on_start()
@@ -288,45 +285,47 @@ class SetupMenu(Menu):
 
     def _render_start(self):
         if self.is_new_user:
-            print(f"\n  {C.BOLD}Hello!{C.RESET} It looks like this is your first time using this program.")
-            print("  No worries! Let's get your Discord account linked up first.")
+            print(f"  {C.BOLD}Hello!{C.RESET} {C.GRAY}It looks like this is your first time using this program.{C.RESET}")
+            print(f"  {C.GRAY}No worries! Let's get your Discord account linked up first.{C.RESET}")
         else:
-            print(f"\n  {C.BOLD}We couldn't log you in.{C.RESET}")
-            print()
-            print("  This might have happened because the login token changed,")
-            print("  or you revoked access for this application through Discord.")
-            print("  Fear not! Let's try to get that fixed.")
+            print(f"  {C.BOLD}{C.YELLOW}We couldn't log you in.{C.RESET}")
+            print(f"  {C.GRAY}This might have happened because the login token changed,{C.RESET}")
+            print(f"  {C.GRAY}or you revoked access for this application through Discord.{C.RESET}")
+            print(f"  {C.GRAY}Fear not! Let's try to get that fixed.{C.RESET}")
         print()
-        print(f"  You can exit this program at any time by pressing {key_opt('q', '')} or {C.YELLOW}Ctrl-C{C.RESET}.")
-        print()
-        print(f"  {C.BOLD}Press enter to show the login prompt.{C.RESET}")
+        print(f"  {C.GRAY}Exit any time with {C.WHITE}{C.BOLD}q{C.RESET}{C.GRAY} or {C.WHITE}{C.BOLD}Ctrl-C{C.RESET}{C.GRAY}.{C.RESET}")
+        print(f"  {C.BOLD}Press {C.WHITE}enter{C.RESET}{C.BOLD} to show the login prompt.{C.RESET}")
 
     def _render_waiting(self):
         if self.waiting_stage == "connecting":
-            print("\n  We'll try to automagically open up your browser. Fingers crossed...")
+            print(f"  {C.GRAY}We'll try to automagically open up your browser. Fingers crossed…{C.RESET}")
         elif self.waiting_stage == "opened":
-            print(f"\n  {C.GREEN}Browser opened!{C.RESET}")
-            print("  Please follow the instructions in your browser.")
-            print(f"\n  {key_opt('c', 'opy URL')}")
-        elif self.waiting_stage == "manual":
-            print(f"\n  {C.YELLOW}Something went wrong...{C.RESET} Please manually paste this URL into your browser:")
-            print(f"  {self.auth_url}")
-            print(f"\n  {key_opt('c', 'opy URL')}")
-        elif self.waiting_stage == "timeout":
-            print(f"\n  {C.RED}Timed out{C.RESET} waiting for browser login.")
-            print("  Please manually open this URL in your browser:")
-            print(f"  {self.auth_url}")
-        elif self.waiting_stage == "finishing":
-            print("\n  Finishing the last bits...")
-        elif self.waiting_stage == "done":
-            print(f"\n  {C.GREEN}{C.BOLD}Done!{C.RESET}")
+            print(f"  {ok('Browser opened!')}")
+            print(f"  {C.GRAY}Please follow the instructions in your browser.{C.RESET}")
             print()
+            print(f"  {key_opt('c', 'opy URL')}")
+        elif self.waiting_stage == "manual":
+            print(f"  {warn('Something went wrong.')}")
+            print(f"  {C.GRAY}Please paste this URL into your browser:{C.RESET}")
+            print(f"  {C.CYAN}{self.auth_url}{C.RESET}")
+            print()
+            print(f"  {key_opt('c', 'opy URL')}")
+        elif self.waiting_stage == "timeout":
+            print(f"  {err('Timed out waiting for browser login.')}")
+            print(f"  {C.GRAY}Please open this URL in your browser:{C.RESET}")
+            print(f"  {C.CYAN}{self.auth_url}{C.RESET}")
+        elif self.waiting_stage == "finishing":
+            print(f"  {C.GRAY}Finishing the last bits…{C.RESET}")
+        elif self.waiting_stage == "done":
+            print(f"  {ok('Done!')}")
             print(
-                f"  Signed in as {C.BOLD}{self.app.user.username}#{self.app.user.discriminator}{C.RESET}."
+                f"  {C.GRAY}Signed in as {C.WHITE}{C.BOLD}"
+                f"{self.app.user.username}#{self.app.user.discriminator}{C.RESET}{C.GRAY}.{C.RESET}"
             )
 
         if self.copy_flash:
-            print(f"\n  {C.GREEN}{self.copy_flash}{C.RESET}")
+            print()
+            print(f"  {C.GREEN}{self.copy_flash}{C.RESET}")
 
     def handle_key(self, key):
         if self.state == "setup_start" and key == "enter":
@@ -343,10 +342,10 @@ class SetupMenu(Menu):
             self._copy_auth_url()
 
     def _copy_auth_url(self):
-        ok = _copy_to_clipboard(self.auth_url)
+        copied = _copy_to_clipboard(self.auth_url)
         self.copy_flash = (
             "Copied login URL to clipboard."
-            if ok
+            if copied
             else "Clipboard not available. Please manually copy the URL above."
         )
         self.update()
@@ -417,35 +416,33 @@ class MainMenu(Menu):
         self._start_thread()
 
     def render(self):
-        rpc_status = "Connected" if self.app.rpc_handler.is_connected else "Disconnected"
-        status_color = C.GREEN if self.app.rpc_handler.is_connected else C.RED
+        connected = self.app.rpc_handler.is_connected
+        status = (
+            f"{C.GREEN}Connected{C.RESET}" if connected else f"{C.RED}Disconnected{C.RESET}"
+        )
+        name = self.riitag_info.name or f"{C.GRAY}Unknown{C.RESET}"
+        discord = (
+            self.app.user.username if self.app.user else f"{C.GRAY}Unknown{C.RESET}"
+        )
 
-        print()
-        print(
-            f"  {C.BOLD}RiiTag Username:{C.RESET} {self.riitag_info.name or C.GRAY + 'Unknown' + C.RESET}"
-        )
-        print(
-            f"  {C.BOLD}Discord:{C.RESET} {self.app.user.username if self.app.user else 'Unknown'}"
-        )
-        print(f"  {C.BOLD}Status:{C.RESET} {status_color}{rpc_status}{C.RESET}")
-        print(f"  {C.BOLD}Games:{C.RESET} {len(self.riitag_info.games)}")
+        print(f"  {C.GRAY}{'RiiTag user:':<13}{C.RESET}{C.BOLD}{name}{C.RESET}")
+        print(f"  {C.GRAY}{'Discord:':<13}{C.RESET}{C.BOLD}{discord}{C.RESET}")
+        print(f"  {C.GRAY}{'RPC status:':<13}{C.RESET}{status}")
+        print(f"  {C.GRAY}{'Games:':<13}{C.RESET}{C.BOLD}{len(self.riitag_info.games)}{C.RESET}")
 
         games = [game for game in self.riitag_info.games if game]
         if games:
-            table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1, 0, 0))
-            table.add_column("game")
+            print()
             for game in games:
                 parts = game.split("-")
                 if len(parts) == 2:
                     console_name, game_id = parts
-                    table.add_row(f"- {game_id} {C.GRAY}({console_name.title()}){C.RESET}")
+                    print(f"  {C.GRAY}•{C.RESET} {game_id} {C.GRAY}{console_name.title()}{C.RESET}")
                 else:
-                    table.add_row(f"- {parts[0]}")
-            print()
-            console.print(table)
+                    print(f"  {C.GRAY}•{C.RESET} {parts[0]}")
 
+        print()
         if self.right_panel_state == "menu":
-            print()
             opts = [
                 key_opt("v", "iew tag"),
                 key_opt("s", "ettings"),
@@ -457,7 +454,8 @@ class MainMenu(Menu):
             self._render_settings()
 
     def _render_settings(self):
-        print(f"\n  {C.BOLD}Settings{C.RESET}")
+        print(f"  {C.BOLD}{C.CYAN}Settings{C.RESET}")
+        print()
         print(
             f"  {key_opt('1', ' Presence timeout', f'{self.app.preferences.presence_timeout} min')}"
         )
@@ -530,7 +528,7 @@ class MainMenu(Menu):
             try:
                 value = int(raw.strip())
             except ValueError:
-                _pause(f"Couldn't parse {raw!r} as a number", ok=False)
+                _pause(f"Couldn't parse {raw!r} as a number", is_ok=False)
             else:
                 value = max(limits[0], min(limits[1], value))
                 setter(value)
@@ -672,52 +670,48 @@ class DebugMenu(Menu):
                 else:
                     current_game_info = f"Game outdated (timeout): {game_id}"
 
-        print()
-        print(f"  {C.RED}{C.BOLD}!!! SECURITY WARNING !!!{C.RESET}")
-        print(f"  {C.RED}DO NOT SHARE ANY INFORMATION FROM THIS DEBUG SCREEN{C.RESET}")
-        print(f"  {C.RED}with anyone except t0g3pii (the developer).{C.RESET}")
-        print(f"  {C.RED}Contains sensitive data that could lead to account access!{C.RESET}")
-        print()
-        print(f"  {C.BOLD}== RiiTag-RPC Debug Information =={C.RESET}")
-        print()
-        print(f"  {C.BOLD}Version:{C.RESET} {self.app.version_string}")
-        print(f"  {C.BOLD}Discord RPC Status:{C.RESET} {rpc_status}")
-        print(f"  {C.BOLD}RPC Display:{C.RESET} {current_game_info}")
-        print(f"  {C.BOLD}Last Played Game:{C.RESET} {last_played_info}")
-        print(f"  {C.BOLD}RPC Connection Attempts:{C.RESET} {self.rpc_connection_attempts}")
-        print(f"  {C.BOLD}Discord Token:{C.RESET} {token_info}")
-        print(f"  {C.BOLD}RiiTag Status:{C.RESET} {riitag_info}")
-        print(f"  {C.BOLD}Last Update:{C.RESET} {self.last_update_time}")
-        print()
-        print(f"  {C.BOLD}== Cache Information =={C.RESET}")
-        print(f"  {C.BOLD}Cache Directory:{C.RESET} {self.cache_info.get('directory', 'Unknown')}")
-        print(
-            f"  {C.BOLD}Token File:{C.RESET} "
-            + ("Present" if self.cache_info.get("token_exists") else "Missing")
+        riitag_username = (
+            self.app.user.riitag.name
+            if self.app.user and hasattr(self.app.user, "riitag") and self.app.user.riitag
+            else "Unknown"
         )
-        print(
-            f"  {C.BOLD}Preferences File:{C.RESET} "
-            + ("Present" if self.cache_info.get("prefs_exists") else "Missing")
+        discord_user = (
+            f"{self.app.user.username}#{self.app.user.discriminator}"
+            if self.app.user
+            else "Unknown"
         )
-        print(
-            f"  {C.BOLD}User ID File:{C.RESET} "
-            + ("Present" if self.cache_info.get("uid_exists") else "Missing")
-        )
+        def yn(present):
+            return f"{C.GREEN}present{C.RESET}" if present else f"{C.RED}missing{C.RESET}"
+
+        def row(label, value):
+            print(f"  {C.GRAY}{label + ':':<16}{C.RESET}{value}")
+
+        print(f"  {warn('SECURITY WARNING')}")
+        print(f"  {C.RED}Don't share anything on this screen with anyone but t0g3pii.{C.RESET}")
+        print(f"  {C.RED}It exposes data that could give someone access to your account.{C.RESET}")
         print()
-        print(f"  {C.BOLD}== User Information =={C.RESET}")
-        print(
-            f"  {C.BOLD}Discord User:{C.RESET} "
-            f"{self.app.user.username if self.app.user else 'Unknown'}#"
-            f"{self.app.user.discriminator if self.app.user else '0000'}"
-        )
-        print(f"  {C.BOLD}Discord ID:{C.RESET} {self.app.user.id if self.app.user else 'Unknown'}")
-        print(
-            f"  {C.BOLD}RiiTag Username:{C.RESET} "
-            + (
-                self.app.user.riitag.name
-                if self.app.user and hasattr(self.app.user, "riitag") and self.app.user.riitag
-                else "Unknown"
-            )
-        )
+        print(f"  {C.BOLD}{C.CYAN}Debug information{C.RESET}")
+        print()
+        row("Version", self.app.version_string)
+        row("Discord RPC", rpc_status)
+        row("RPC display", current_game_info)
+        row("Last played", last_played_info)
+        row("RPC attempts", self.rpc_connection_attempts)
+        row("Discord token", token_info)
+        row("RiiTag status", riitag_info)
+        row("Last update", self.last_update_time)
+        print()
+        print(f"  {C.BOLD}{C.CYAN}Cache{C.RESET}")
+        print()
+        row("Directory", self.cache_info.get("directory", "Unknown"))
+        row("Token file", yn(self.cache_info.get("token_exists")))
+        row("Prefs file", yn(self.cache_info.get("prefs_exists")))
+        row("User ID file", yn(self.cache_info.get("uid_exists")))
+        print()
+        print(f"  {C.BOLD}{C.CYAN}User{C.RESET}")
+        print()
+        row("Discord user", discord_user)
+        row("Discord ID", self.app.user.id if self.app.user else "Unknown")
+        row("RiiTag user", riitag_username)
         print()
         print("  " + "   ".join([key_opt("r", "efresh"), key_opt("b", "ack")]))

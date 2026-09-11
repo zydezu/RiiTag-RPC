@@ -89,11 +89,39 @@ def read_key(timeout=None):
     return _read_key_posix(timeout)
 
 
+def enter_fullscreen() -> None:
+    print("\033[?1049h\033[?25l", end="", flush=True)
+
+
+def exit_fullscreen() -> None:
+    print("\033[?25h\033[?1049l", end="", flush=True)
+
+
+def show_cursor() -> None:
+    print("\033[?25h", end="", flush=True)
+
+
+def hide_cursor() -> None:
+    print("\033[?25l", end="", flush=True)
+
+
 def clear() -> None:
-    print("\033[H\033[J", end="", flush=True)
+    print("\033[H\033[2J", end="", flush=True)
 
 
 def key_opt(key: str, label: str, note: str = "") -> str:
     """Format a coloured key hint: [E]dit  or  [E]dit (3)"""
     note_str = f" {C.GRAY}({note}){C.RESET}" if note else ""
     return f"[{C.YELLOW}{key}{C.RESET}]{label}{note_str}"
+
+
+def ok(msg: str) -> str:
+    return f"{C.GREEN}✓  {msg}{C.RESET}"
+
+
+def warn(msg: str) -> str:
+    return f"{C.YELLOW}⚠  {msg}{C.RESET}"
+
+
+def err(msg: str) -> str:
+    return f"{C.RED}✗  {msg}{C.RESET}"
