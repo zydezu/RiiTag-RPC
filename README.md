@@ -31,7 +31,7 @@ Please report any bugs by [creating an issue](https://github.com/zydezu/RiiTag-R
 ## Packaging
 - This project can be packaged as a standalone executable for Linux (and Windows with some caveats).
 - Linux (single-file):
-  - Prereqs: Python 3.8+, PyInstaller
+  - Prereqs: Python 3.10+, PyInstaller
   - Run: `./tools/build_executable.sh`
   - Output: dist/start (Linux)
 - Windows: build should be performed on Windows (or a Windows CI) using PyInstaller:

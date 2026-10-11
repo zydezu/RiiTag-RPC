@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import threading
 import time
@@ -17,7 +15,7 @@ TOKEN_ENDPOINT = "https://discord.com/api/oauth2/token"
 
 
 class OAuth2Token:
-    def __init__(self, client: OAuth2Client, **kwargs):
+    def __init__(self, client: "OAuth2Client", **kwargs):
         self._client = client
 
         self.access_token = kwargs.pop("access_token")

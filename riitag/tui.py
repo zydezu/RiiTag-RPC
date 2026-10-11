@@ -124,4 +124,4 @@ def warn(msg: str) -> str:
 
 
 def err(msg: str) -> str:
-    return f"{C.RED}✗  {msg}{C.RESET}"
+    return f"{C.MAGENTA}✗  {msg}{C.RESET}"
